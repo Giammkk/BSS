@@ -106,7 +106,7 @@ class Battery:
             return t
         else:
             delta_charge = time_to_ch * CR / 60
-            if check_high_demand(hour + 1):
+            if self.__check_high_demand(hour + 1):
                 if BTH - (self.charge + delta_charge) > 0:
                     t = time_to_ch + (BTH - (self.charge + delta_charge)) * 60 / CR
                 else:
@@ -117,8 +117,13 @@ class Battery:
                     t = time_to_ch + 0.001
                 else:
                     t = time_to_ch + (C - (self.charge + delta_charge)) * 60 / CR
-
         return t 
+    
+    def __check_high_demand(hour):
+        if (hour>=8 and hour<12) or (hour>=16 and hour<19):
+            return True
+        else:
+            return False
 
 ## Electric Vehicle ##
 class EV:
@@ -130,17 +135,12 @@ class EV:
     
     def __lt__(self, other): 
         return self.arrival_time < other.arrival_time
-
-def check_high_demand(hour):
-    if (hour>=8 and hour<12) or (hour>=16 and hour<19):
-        return True
-    else:
-        return False
-
-
+    
+## Battery Switch Station ##
 class BSS:
     def __init__(self, sockets=[], n_charging=0):
         self.sockets = sockets
+        self.queue = list()
         self.n_sockets = len(sockets)
         self.n_charging = 0
         self.cnt = 0

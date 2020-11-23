@@ -58,12 +58,13 @@ def next_arrival():
     return random.expovariate(1 / arrival_coeff[HOUR])
 
 
-def arrival(time, ev, FES, queue, bss, stats):
+def arrival(time, ev, FES, bss, stats):
     """
     An EV is arrived at the BSS.
     """
     sockets = bss.sockets
-    update_all_batteries(time, queue, bss, stats, 0)
+    queue = bss.queue
+    update_all_batteries(time, bss, stats, 0)
     next_ready = 60 * C / CR # Max time to charge a battery (2h)
     can_wait = ev.can_wait
     resume_charge = 0
@@ -138,11 +139,12 @@ def arrival(time, ev, FES, queue, bss, stats):
 
 
 ## Departure ##
-def battery_available(time, FES, queue, bss, stats):
+def battery_available(time, FES, bss, stats):
     """
     One of the batteries is fully charged.
     """
     sockets = bss.sockets
+    queue = bss.queue
     price = dm.get_prices_electricity(MONTH, DAY, HOUR)
     next_ready = 60 * C / CR
     resume_charge = 0
@@ -205,12 +207,13 @@ def battery_available(time, FES, queue, bss, stats):
 
 
 ## Change Hour ##
-def update_all_batteries(time, queue, bss, stats, flag, FES=None):
+def update_all_batteries(time, bss, stats, flag, FES=None):
     """
     Since every hour electricity price and PV production change, the charge of
     the batteries must be update with the right parameters.
     """
     sockets = bss.sockets
+    queue = bss.queue
     price = dm.get_prices_electricity(MONTH, DAY, HOUR)
     check_high_demand(HOUR)
 
@@ -281,7 +284,7 @@ def compute_daily_stats(stats):
     stats.loss_prob[DAY] = stats.loss[DAY] / stats.arrivals[DAY]
 
 ## Main ##
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     warnings.filterwarnings("ignore")
 
@@ -299,7 +302,6 @@ if __name__ == '__main__':
     FES.put((0, "2_arrival", EV(random.gauss(8000, 1000), 0)))
     FES.put((60, "1_changehour", None))
 
-    queue = list()
     bss = BSS()
     sockets = list()
     for i in range(NBSS):
@@ -331,20 +333,20 @@ if __name__ == '__main__':
         ## DEBUG ##
         # try:
         #     print(event, time, '| Busy sock:', sum([s.busy for s in sockets]),
-        #           '| Ready:', bss.ready_batteries, '| Queue', len(queue),
+        #           '| Ready:', bss.ready_batteries, '| Queue', len(bss.queue),
         #           '| Canwait: ', ev.can_wait)
         # except :
         #     print(event, time, '| Busy sock:', sum([s.busy for s in sockets]),
-        #           '| Ready:', bss.ready_batteries, '| Queue', len(queue))
+        #           '| Ready:', bss.ready_batteries, '| Queue', len(bss.queue))
 
         if event == "2_arrival":
-            resume_charge = arrival(time, ev, FES, queue, bss, stats)
+            resume_charge = arrival(time, ev, FES, bss, stats)
 
         elif event == "1_changehour":
-            rc_flag = update_all_batteries(time, queue, bss, stats, rc_flag, FES)
+            rc_flag = update_all_batteries(time, bss, stats, rc_flag, FES)
 
         elif event == "0_batteryavailable":
-            resume_charge = battery_available(time, FES, queue, bss, stats)
+            resume_charge = battery_available(time, FES, bss, stats)
 
         if resume_charge:
             rc_flag = 1
