@@ -9,7 +9,7 @@ import warnings
 import sys
 
 ## Global variables ##
-SIM_TIME = 60
+SIM_TIME = 60 * 24 * 365
 DAY = 1  # Day of the simulation (from 1 to 365)
 HOUR = 0  # Current hour (from 0 to 23)
 CURRENT_DAY = 1  # Current day (from 1 to 30/31/28)
@@ -212,7 +212,7 @@ def battery_available(time, FES, queue, bss, stats):
 
 
 ## Change Hour ##
-def update_all_batteries(time, queue, bss, stats, flag):
+def update_all_batteries(time, queue, bss, stats, flag, FES=None):
     """
     Since every hour electricity price and PV production change, the charge of
     the batteries must be update with the right parameters.
@@ -245,13 +245,16 @@ def update_all_batteries(time, queue, bss, stats, flag):
     stats.last_update = time
     if flag:
         bss.resume_charge(time)
+
+    if FES:
+        set_time(FES, stats)
     return
 
 
 def check_high_demand(hour):
     global HIGH_DEMAND
 
-    if hour == 8 or (hour >= 12 and hour < 15) or (hour >= 18 and hour <= 19):
+    if hour == 8 or (12 <= hour < 15) or (18 <= hour <= 19):
         HIGH_DEMAND = True
         return HIGH_DEMAND
     else:
@@ -259,18 +262,53 @@ def check_high_demand(hour):
         return HIGH_DEMAND
 
 
-def simulation(F, TMAX, stats_by_bth, f_list, tmax_list):
+def compute_daily_stats(stats):
+    stats.avg_wait[DAY] = stats.avg_wait[DAY] / stats.arrivals[DAY]
+    stats.avg_ready[DAY] = stats.avg_ready[DAY] / stats.arrivals[DAY]
+    stats.len_queue[DAY] = stats.len_queue[DAY] / (60 * 24)
+    stats.busy_sockets[DAY] = stats.busy_sockets[DAY] / (60 * 24)
+    #stats.loss_prob[DAY] = stats.loss[DAY] / stats.arrivals[DAY]
+
+
+def set_time(FES, stats):
     global HOUR, DAY, CURRENT_DAY, MONTH
+
+    HOUR += 1
+
+    if HOUR == 24:
+        compute_daily_stats(stats)
+        HOUR = 0
+        DAY += 1
+        CURRENT_DAY += 1
+
+        if CURRENT_DAY > monthrange(2019, MONTH)[1]:
+            CURRENT_DAY = 1
+            MONTH += 1
+
+    FES.put((60 * (HOUR + 1) + ((DAY - 1) * 24 * 60), "1_changehour", None))
+
+
+def reset_time():
+    global HOUR, DAY, CURRENT_DAY, MONTH
+
+    HOUR = 0
+    DAY = 1
+    CURRENT_DAY = 1
+    MONTH = 1
+
+
+def simulation(SPV, NBSS, stats_by_nbss, spv_list, nbss_list):
     sg = ShareGlobals()
     sg.set_globals(C, CR, BTH, PV_SET, TOL, F, TMAX)
     sg.check()
     print("SPV: ", SPV, "| NBSS:", NBSS)
-    random.seed(4)
+    #random.seed(4)
     time = 0
 
     FES = PriorityQueue()
     # Schedule the first arrival at t=0
     FES.put((0, "2_arrival", EV(random.gauss(8000, 1000), 0)))
+    FES.put((60, "1_changehour", None))
 
     queue = list()
     bss = BSS()
@@ -287,73 +325,51 @@ def simulation(F, TMAX, stats_by_bth, f_list, tmax_list):
     stats = Statistics()
 
     previous_time = -1
-    MONTH = 1
-    DAY = 1
 
-    while MONTH <= 12:
-        number_of_days = monthrange(2019, MONTH)[1]
-        CURRENT_DAY = 1
+    rc_flag = 0
+    while time < SIM_TIME:
 
-        while CURRENT_DAY <= number_of_days:
-            # pri1nt(f"{CURRENT_DAY}/{MONTH}")
-            HOUR = 0
+        (time, event, ev) = FES.get()
+        if ev:
+            ev.arrival_time = time
 
-            while HOUR < 24:
+        # Check if time always increases
+        if previous_time > time:
+            raise Exception("Error.")
+        else:
+            previous_time = time
 
-                FES.put((60 * (HOUR + 1) + ((DAY - 1) * 24 * 60), "1_changehour", None))
-                # print(f"{HOUR}")
-                rc_flag = 0
-                while time < SIM_TIME * (HOUR + 1) + ((DAY - 1) * 24 * 60):
+        if event == "2_arrival":
+            resume_charge = arrival(time, ev, FES, queue, bss, stats)
 
-                    (time, event, ev) = FES.get()
-                    if ev:
-                        ev.arrival_time = time
+        elif event == "1_changehour" and time < SIM_TIME:
+            update_all_batteries(time, queue, bss, stats, rc_flag, FES)
 
-                    # Check if time always increases
-                    if previous_time > time:
-                        raise Exception("Error.")
-                    else:
-                        previous_time = time
+        elif event == "0_batteryavailable":
+            resume_charge = battery_available(time, FES, queue, bss, stats)
 
-                    if event == "2_arrival":
-                        resume_charge = arrival(time, ev, FES, queue, bss, stats)
+        if resume_charge:
+            rc_flag = 1
 
-                    elif event == "1_changehour":
-                        update_all_batteries(time, queue, bss, stats, rc_flag)
+    # End of simulation
 
-                    elif event == "0_batteryavailable":
-                        resume_charge = battery_available(time, FES, queue, bss, stats)
+    r = spv_list.index(SPV)
+    c = nbss_list.index(NBSS)
+    stats_by_nbss.avg_arrivals[r][c] = np.mean(list(stats.arrivals.values()))
+    stats_by_nbss.avg_loss[r][c] = np.mean(list(stats.loss.values()))
+    stats_by_nbss.avg_avg_wait[r][c] = np.mean(list(stats.avg_wait.values()))
+    stats_by_nbss.avg_avg_ready[r][c] = np.mean(list(stats.avg_ready.values()))
+    stats_by_nbss.avg_cost[r][c] = np.mean(list(stats.cost.values()))
 
-                    if resume_charge:
-                        rc_flag = 1
-
-                HOUR += 1
-
-            stats.avg_wait[DAY] = stats.avg_wait[DAY] / stats.arrivals[DAY]
-            stats.avg_ready[DAY] = stats.avg_ready[DAY] / stats.arrivals[DAY]
-            stats.len_queue[DAY] = stats.len_queue[DAY] / (60 * 24)
-            stats.busy_sockets[DAY] = stats.busy_sockets[DAY] / (60 * 24)
-
-            DAY += 1
-            CURRENT_DAY += 1
-
-        MONTH += 1
-
-    # r = spv_list.index(SPV)
-    # c = nbss_list.index(NBSS)
-    # stats_by_nbss.avg_arrivals[r][c] = np.mean(list(stats.arrivals.values()))
-    # stats_by_nbss.avg_loss[r][c] = np.mean(list(stats.loss.values()))
-    # stats_by_nbss.avg_avg_wait[r][c] = np.mean(list(stats.avg_wait.values()))
-    # stats_by_nbss.avg_avg_ready[r][c] = np.mean(list(stats.avg_ready.values()))
-    # stats_by_nbss.avg_cost[r][c] = np.mean(list(stats.cost.values()))
-
-    r = tmax_list.index(TMAX)
-    c = f_list.index(F)
-    stats_by_tmaxf.avg_arrivals[r][c] = np.mean(list(stats.arrivals.values()))
-    stats_by_tmaxf.avg_loss[r][c] = np.mean(list(stats.loss.values()))
-    stats_by_tmaxf.avg_avg_wait[r][c] = np.mean(list(stats.avg_wait.values()))
-    stats_by_tmaxf.avg_avg_ready[r][c] = np.mean(list(stats.avg_ready.values()))
-    stats_by_tmaxf.avg_cost[r][c] = np.mean(list(stats.cost.values()))
+    # r = tmax_list.index(TMAX)
+    # c = f_list.index(F)
+    # print(r, c, F, TMAX)
+    # stats_by_tmaxf.avg_arrivals[r][c] = np.mean(list(stats.arrivals.values()))
+    # stats_by_tmaxf.avg_loss[r][c] = np.mean(list(stats.loss.values()))
+    # print(stats_by_tmaxf.avg_loss[r][c])
+    # stats_by_tmaxf.avg_avg_wait[r][c] = np.mean(list(stats.avg_wait.values()))
+    # stats_by_tmaxf.avg_avg_ready[r][c] = np.mean(list(stats.avg_ready.values()))
+    # stats_by_tmaxf.avg_cost[r][c] = np.mean(list(stats.cost.values()))
 
     # r = param_list.index(BTH)
     # stats_by_bth.avg_arrivals[r] = np.mean(list(stats.arrivals.values()))
@@ -362,9 +378,9 @@ def simulation(F, TMAX, stats_by_bth, f_list, tmax_list):
     # stats_by_bth.avg_avg_ready[r] = np.mean(list(stats.avg_ready.values()))
     # stats_by_bth.avg_cost[r] = np.mean(list(stats.cost.values()))
 
-    print("Mean arrivals: %f" % (np.mean(list(stats.arrivals.values()))))
-    print("Mean loss: %f" % (np.mean(list(stats.loss.values()))))
-    print("Mean cost: %f" % (np.mean(list(stats.cost.values()))))
+    # print("Mean arrivals: %f" % (np.mean(list(stats.arrivals.values()))))
+    # print("Mean loss: %f" % (np.mean(list(stats.loss.values()))))
+    # print("Mean cost: %f" % (np.mean(list(stats.cost.values()))))
     print("-")
 
     return stats
@@ -381,8 +397,8 @@ if __name__ == '__main__':
     stats_by_nbss = AvgStatistics(len(spv_list), len(nbss_list))
 
     # F / TMAX
-    f_list = range(1, NBSS + 1)
-    tmax_list = range(5, 30, 5)
+    f_list = range(1, NBSS)
+    tmax_list = range(5, 20, 5)
     stats_by_tmaxf = AvgStatistics(len(tmax_list), len(f_list))
 
     # BTH
@@ -392,26 +408,28 @@ if __name__ == '__main__':
     if PV_SET:
         print("SPV: ", SPV)
 
-    # for SPV in spv_list:
-    #     for NBSS in nbss_list:
-    for TMAX in tmax_list:
-        for F in f_list:
+    for SPV in spv_list:
+        for NBSS in nbss_list:
+    # for TMAX in tmax_list:
+    #     for F in f_list:
             # for BTH in bth_list:
-            simulation(F, TMAX, stats_by_bth, f_list, tmax_list)
+            random.seed(4)
+            simulation(SPV, NBSS, stats_by_nbss, spv_list, nbss_list)
+            reset_time()
 
     # %% Show statistics ##
 
-    # MultiPlot(stats_by_nbss.avg_arrivals, title="Arrivals", labels=spv_list).plot()
-    # MultiPlot(stats_by_nbss.avg_loss, title="Losses", labels=spv_list).plot()
-    # MultiPlot(stats_by_nbss.avg_avg_wait, title="Waiting", labels=spv_list).plot()
-    # MultiPlot(stats_by_nbss.avg_avg_ready, title="Average ready", labels=spv_list).plot()
-    # MultiPlot(stats_by_nbss.avg_cost, title="Costs", labels=spv_list).plot()
+    MultiPlot(stats_by_nbss.avg_arrivals, title="Arrivals", labels=spv_list).plot()
+    MultiPlot(stats_by_nbss.avg_loss, title="Losses", labels=spv_list).plot()
+    MultiPlot(stats_by_nbss.avg_avg_wait, title="Waiting", labels=spv_list).plot()
+    MultiPlot(stats_by_nbss.avg_avg_ready, title="Average ready", labels=spv_list).plot()
+    MultiPlot(stats_by_nbss.avg_cost, title="Costs", labels=spv_list).plot()
 
-    MultiPlot(stats_by_tmaxf.avg_arrivals.T, title="Arrivals", labels=f_list).plot("TMAX")
-    MultiPlot(stats_by_tmaxf.avg_loss.T, title="Losses", labels=f_list).plot("TMAX")
-    MultiPlot(stats_by_tmaxf.avg_avg_wait.T, title="Waiting", labels=f_list).plot("TMAX")
-    MultiPlot(stats_by_tmaxf.avg_avg_ready.T, title="Average ready", labels=f_list).plot("TMAX")
-    MultiPlot(stats_by_tmaxf.avg_cost.T, title="Costs", labels=f_list).plot("TMAX")
+    # MultiPlot(stats_by_tmaxf.avg_arrivals.T, title="Arrivals", labels=f_list).plot("TMAX")
+    # MultiPlot(stats_by_tmaxf.avg_loss.T, title="Losses", labels=f_list).plot("TMAX")
+    # MultiPlot(stats_by_tmaxf.avg_avg_wait.T, title="Waiting", labels=f_list).plot("TMAX")
+    # MultiPlot(stats_by_tmaxf.avg_avg_ready.T, title="Average ready", labels=f_list).plot("TMAX")
+    # MultiPlot(stats_by_tmaxf.avg_cost.T, title="Costs", labels=f_list).plot("TMAX")
 
     # MultiPlot(stats_by_bth.avg_arrivals, title="Arrivals", bth_list, xlabel="BTH").single_plot()
     # MultiPlot(stats_by_bth.avg_loss, title="Losses", bth_list, xlabel="BTH").single_plot()

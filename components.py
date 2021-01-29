@@ -119,7 +119,7 @@ class Battery:
                     t = time_to_ch + (C - (self.charge + delta_charge)) * 60 / CR
         return t 
     
-    def __check_high_demand(hour):
+    def __check_high_demand(self, hour):
         if (hour>=8 and hour<12) or (hour>=16 and hour<19):
             return True
         else:
