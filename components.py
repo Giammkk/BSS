@@ -121,7 +121,7 @@ class Battery:
         return t 
     
     def __check_high_demand(self, hour):
-        if (hour>=8 and hour<12) or (hour>=16 and hour<19):
+        if (8 <= hour < 12) or (16 <= hour < 19):
             return True
         else:
             return False
@@ -185,8 +185,6 @@ class BSS:
             if s.busy:
                 if not s.is_charging:
                     s.postpone_timer -= 1
-                    
-                    
                 
                 if s.postpone_timer <= 0:
                     s.is_charging = True

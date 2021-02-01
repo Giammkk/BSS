@@ -176,7 +176,7 @@ def battery_available(time, FES, bss, stats):
 
                 if not queue.empty():
                     ev = queue.get()
-                    print(ev)
+                    # print(ev)
                     socket.plug_battery(ev.battery, time)
                     bss.ready_batteries -= 1
                     ev.can_wait = -1
@@ -187,7 +187,7 @@ def battery_available(time, FES, bss, stats):
 
                 if not queue.empty():
                     ev = queue.get()
-                    print(ev)
+                    # print(ev)
                     socket.plug_battery(ev.battery, time)
                     bss.ready_batteries -= 1
                     ev.can_wait = -1
@@ -216,11 +216,11 @@ def update_all_batteries(time, bss, stats, flag, FES=None):
     the batteries must be update with the right parameters.
     """
     sockets = bss.sockets
-    queue = bss.queue.queue
+    queue = bss.queue
     price = dm.get_prices_electricity(MONTH, DAY, HOUR)
     check_high_demand(HOUR)
 
-    stats.len_queue[DAY] += len(queue) * (time - stats.last_update)
+    stats.len_queue[DAY] += len(queue.queue) * (time - stats.last_update)
     stats.busy_sockets[DAY] += sum([s.busy for s in sockets]) * (time - stats.last_update)
 
     PVpower = 0
@@ -342,9 +342,6 @@ if __name__ == "__main__":
             print(event, time, '| Busy sock:', sum([s.busy for s in sockets]),
                   '| Ready:', bss.ready_batteries, '| Queue', len(bss.queue.queue),
                   '| FES:', FES.queue)
-
-        if time > 319090:
-            print("debug")
 
         if event == "2_arrival":
             resume_charge = arrival(time, ev, FES, bss, stats)
