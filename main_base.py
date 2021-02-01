@@ -21,7 +21,7 @@ TOL = 0.98              # Percentage of charge to be full
 NBSS = 15               # Max number of chargers
 B = 2*NBSS              # Max number of batteries (charging + queue)
 WMAX = 15               # Max waiting time for EV
-BTH = 30000             # Minimum charge level
+BTH = 38000             # Minimum charge level
 CR = int(C/2)           # Charging rate per hour
 PV_SET = 1              # Indicator of presence of a PV in the BSS
 SPV = 100               # Nominal capacity of one PV (kW) * number of panels
@@ -103,7 +103,8 @@ def arrival(time, ev, FES, bss, stats):
             battery = ev.battery
         else:
             try:
-                ev = queue.pop(0)
+                ev = queue.get()
+                ev.can_wait = -1
             except:
                 print("empty queue", time)
                 sys.exit()
@@ -114,12 +115,12 @@ def arrival(time, ev, FES, bss, stats):
                 socket.plug_battery(battery, time)
                 break
 
-    elif next_ready <= WMAX and can_wait == 1 and battery_booked and len(queue) <= NBSS:
+    elif next_ready <= WMAX and can_wait == 1 and battery_booked and len(queue.queue) <= NBSS:
         # print(DAY, next_ready)
         stats.avg_wait[DAY] += next_ready
         battery_booked.booked = True
         socket_booked.is_charging = True # Reactivate charging if battery has been booked
-        queue.append( ev )
+        queue.put(ev)
         ev.can_wait = 0
         ev.service_time = next_ready + time
         FES.put((next_ready + time, "2_arrival", ev))
@@ -149,7 +150,7 @@ def battery_available(time, FES, bss, stats):
     next_ready = 60 * C / CR
     resume_charge = 0
 
-    stats.len_queue[DAY] += len(queue) * (time - stats.last_update)
+    stats.len_queue[DAY] += len(queue.queue) * (time - stats.last_update)
     stats.busy_sockets[DAY] += sum([s.busy for s in sockets]) * (time - stats.last_update)
 
     # print(HOUR, DAY)
@@ -173,8 +174,9 @@ def battery_available(time, FES, bss, stats):
                 socket.unplug_battery()
                 bss.ready_batteries += 1
 
-                if queue:
-                    ev = queue.pop(0)
+                if not queue.empty():
+                    ev = queue.get()
+                    print(ev)
                     socket.plug_battery(ev.battery, time)
                     bss.ready_batteries -= 1
                     ev.can_wait = -1
@@ -183,8 +185,9 @@ def battery_available(time, FES, bss, stats):
                 socket.unplug_battery()
                 bss.ready_batteries += 1
 
-                if queue:
-                    ev = queue.pop(0)
+                if not queue.empty():
+                    ev = queue.get()
+                    print(ev)
                     socket.plug_battery(ev.battery, time)
                     bss.ready_batteries -= 1
                     ev.can_wait = -1
@@ -213,7 +216,7 @@ def update_all_batteries(time, bss, stats, flag, FES=None):
     the batteries must be update with the right parameters.
     """
     sockets = bss.sockets
-    queue = bss.queue
+    queue = bss.queue.queue
     price = dm.get_prices_electricity(MONTH, DAY, HOUR)
     check_high_demand(HOUR)
 
@@ -331,13 +334,17 @@ if __name__ == "__main__":
             previous_time = time
 
         ## DEBUG ##
-        # try:
-        #     print(event, time, '| Busy sock:', sum([s.busy for s in sockets]),
-        #           '| Ready:', bss.ready_batteries, '| Queue', len(bss.queue),
-        #           '| Canwait: ', ev.can_wait)
-        # except :
-        #     print(event, time, '| Busy sock:', sum([s.busy for s in sockets]),
-        #           '| Ready:', bss.ready_batteries, '| Queue', len(bss.queue))
+        try:
+            print(event, time, '| Busy sock:', sum([s.busy for s in sockets]),
+                  '| Ready:', bss.ready_batteries, '| Queue', len(bss.queue.queue),
+                  '| Canwait: ', ev.can_wait, '| FES:', FES.queue)
+        except :
+            print(event, time, '| Busy sock:', sum([s.busy for s in sockets]),
+                  '| Ready:', bss.ready_batteries, '| Queue', len(bss.queue.queue),
+                  '| FES:', FES.queue)
+
+        if time > 319090:
+            print("debug")
 
         if event == "2_arrival":
             resume_charge = arrival(time, ev, FES, bss, stats)

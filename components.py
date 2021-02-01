@@ -1,5 +1,6 @@
 import random
 from calendar import monthrange
+from queue import PriorityQueue
 
 C      = 0
 CR     = 0
@@ -140,7 +141,7 @@ class EV:
 class BSS:
     def __init__(self, sockets=[], n_charging=0):
         self.sockets = sockets
-        self.queue = list()
+        self.queue = PriorityQueue()
         self.n_sockets = len(sockets)
         self.n_charging = 0
         self.cnt = 0

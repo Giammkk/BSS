@@ -297,7 +297,7 @@ def reset_time():
     MONTH = 1
 
 
-def simulation(SPV, NBSS, stats_by_nbss, spv_list, nbss_list):
+def simulation(F, TMAX, stats_by_bth, param_list):
     sg = ShareGlobals()
     sg.set_globals(C, CR, BTH, PV_SET, TOL, F, TMAX)
     sg.check()
@@ -363,20 +363,18 @@ def simulation(SPV, NBSS, stats_by_nbss, spv_list, nbss_list):
 
     # r = tmax_list.index(TMAX)
     # c = f_list.index(F)
-    # print(r, c, F, TMAX)
     # stats_by_tmaxf.avg_arrivals[r][c] = np.mean(list(stats.arrivals.values()))
     # stats_by_tmaxf.avg_loss[r][c] = np.mean(list(stats.loss.values()))
-    # print(stats_by_tmaxf.avg_loss[r][c])
     # stats_by_tmaxf.avg_avg_wait[r][c] = np.mean(list(stats.avg_wait.values()))
     # stats_by_tmaxf.avg_avg_ready[r][c] = np.mean(list(stats.avg_ready.values()))
     # stats_by_tmaxf.avg_cost[r][c] = np.mean(list(stats.cost.values()))
 
-    # r = param_list.index(BTH)
-    # stats_by_bth.avg_arrivals[r] = np.mean(list(stats.arrivals.values()))
-    # stats_by_bth.avg_loss[r] = np.mean(list(stats.loss.values()))
-    # stats_by_bth.avg_avg_wait[r] = np.mean(list(stats.avg_wait.values()))
-    # stats_by_bth.avg_avg_ready[r] = np.mean(list(stats.avg_ready.values()))
-    # stats_by_bth.avg_cost[r] = np.mean(list(stats.cost.values()))
+    r = param_list.index(BTH)
+    stats_by_bth.avg_arrivals[r] = np.mean(list(stats.arrivals.values()))
+    stats_by_bth.avg_loss[r] = np.mean(list(stats.loss.values()))
+    stats_by_bth.avg_avg_wait[r] = np.mean(list(stats.avg_wait.values()))
+    stats_by_bth.avg_avg_ready[r] = np.mean(list(stats.avg_ready.values()))
+    stats_by_bth.avg_cost[r] = np.mean(list(stats.cost.values()))
 
     # print("Mean arrivals: %f" % (np.mean(list(stats.arrivals.values()))))
     # print("Mean loss: %f" % (np.mean(list(stats.loss.values()))))
@@ -402,28 +400,29 @@ if __name__ == '__main__':
     stats_by_tmaxf = AvgStatistics(len(tmax_list), len(f_list))
 
     # BTH
-    bth_list = range(int(C / 2), C, 500)
+    bth_list = range(int(C / 2), C, 1000)
+    bth_list = range(38000, C, 1000)
     stats_by_bth = AvgStatistics(r=len(bth_list))
 
     if PV_SET:
         print("SPV: ", SPV)
 
-    for SPV in spv_list:
-        for NBSS in nbss_list:
+    # for SPV in spv_list:
+    #     for NBSS in nbss_list:
     # for TMAX in tmax_list:
     #     for F in f_list:
-            # for BTH in bth_list:
-            random.seed(4)
-            simulation(SPV, NBSS, stats_by_nbss, spv_list, nbss_list)
+        for BTH in bth_list:
+            random.seed(5)
+            simulation(F, TMAX, stats_by_bth, bth_list)
             reset_time()
 
     # %% Show statistics ##
 
-    MultiPlot(stats_by_nbss.avg_arrivals, title="Arrivals", labels=spv_list).plot()
-    MultiPlot(stats_by_nbss.avg_loss, title="Losses", labels=spv_list).plot()
-    MultiPlot(stats_by_nbss.avg_avg_wait, title="Waiting", labels=spv_list).plot()
-    MultiPlot(stats_by_nbss.avg_avg_ready, title="Average ready", labels=spv_list).plot()
-    MultiPlot(stats_by_nbss.avg_cost, title="Costs", labels=spv_list).plot()
+    # MultiPlot(stats_by_nbss.avg_arrivals, title="Arrivals", labels=spv_list).plot()
+    # MultiPlot(stats_by_nbss.avg_loss, title="Losses", labels=spv_list).plot()
+    # MultiPlot(stats_by_nbss.avg_avg_wait, title="Waiting", labels=spv_list).plot()
+    # MultiPlot(stats_by_nbss.avg_avg_ready, title="Average ready", labels=spv_list).plot()
+    # MultiPlot(stats_by_nbss.avg_cost, title="Costs", labels=spv_list).plot()
 
     # MultiPlot(stats_by_tmaxf.avg_arrivals.T, title="Arrivals", labels=f_list).plot("TMAX")
     # MultiPlot(stats_by_tmaxf.avg_loss.T, title="Losses", labels=f_list).plot("TMAX")
@@ -431,8 +430,8 @@ if __name__ == '__main__':
     # MultiPlot(stats_by_tmaxf.avg_avg_ready.T, title="Average ready", labels=f_list).plot("TMAX")
     # MultiPlot(stats_by_tmaxf.avg_cost.T, title="Costs", labels=f_list).plot("TMAX")
 
-    # MultiPlot(stats_by_bth.avg_arrivals, title="Arrivals", bth_list, xlabel="BTH").single_plot()
-    # MultiPlot(stats_by_bth.avg_loss, title="Losses", bth_list, xlabel="BTH").single_plot()
-    # MultiPlot(stats_by_bth.avg_avg_wait, title="Waiting", bth_list, xlabel="BTH").single_plot()
-    # MultiPlot(stats_by_bth.avg_avg_ready, title="Average ready", bth_list, xlabel="BTH").single_plot()
-    # MultiPlot(stats_by_bth.avg_cost, title="Costs", bth_list, xlabel="BTH").single_plot()
+    MultiPlot(stats_by_bth.avg_arrivals, title="Arrivals", labels=bth_list, xlabel="BTH").single_plot()
+    MultiPlot(stats_by_bth.avg_loss, title="Losses", labels=bth_list, xlabel="BTH").single_plot()
+    MultiPlot(stats_by_bth.avg_avg_wait, title="Waiting", labels=bth_list, xlabel="BTH").single_plot()
+    MultiPlot(stats_by_bth.avg_avg_ready, title="Average ready", labels=bth_list, xlabel="BTH").single_plot()
+    MultiPlot(stats_by_bth.avg_cost, title="Costs", labels=bth_list, xlabel="BTH").single_plot()
