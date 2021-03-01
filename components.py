@@ -139,7 +139,7 @@ class EV:
     
 ## Battery Switch Station ##
 class BSS:
-    def __init__(self, sockets=[], n_charging=0):
+    def __init__(self, sockets=[]):
         self.sockets = sockets
         self.queue = PriorityQueue()
         self.n_sockets = len(sockets)
@@ -164,7 +164,7 @@ class BSS:
                 price_next_hour = dm.get_prices_electricity(month, day, hour)
 
                 # busy_sockets = sum([s.busy for s in self.sockets])
-                if  pv_next_hour > 0 or price_now > price_next_hour:
+                if pv_next_hour > 0 or price_now > price_next_hour:
                     ind = 0
                     while self.postponed_batteries < F and ind < self.n_sockets:
                         # print(ind)

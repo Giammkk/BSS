@@ -26,7 +26,7 @@ CR = int(C/2)           # Charging rate per hour
 PV_SET = 1              # Indicator of presence of a PV in the BSS
 SPV = 100               # Nominal capacity of one PV (kW) * number of panels
 F = NBSS/3              # Fraction of batteries whose charge cannot be postponed
-TMAX = 20               # Maximum time by which the charge process can be postponed
+TMAX = 120               # Maximum time by which the charge process can be postponed
 HIGH_DEMAND = False     # High demand indicator
 
 dm = DatasetManager()
@@ -54,9 +54,10 @@ class Statistics:
 
 def next_arrival():
     arrival_coeff = [30, 30, 30, 30, 20, 15, 13, 10, 5, 8, 15, 15, 3, # 0->13
-                      4, 10, 13, 15, 15, 2, 5, 15, 18, 20, 25] # 14->23
+                      4, 10, 13, 15, 15, 3, 5, 15, 18, 20, 25] # 14->23
     return random.expovariate(1 / arrival_coeff[HOUR])
-
+    # mean = sum(arrival_coeff) / len(arrival_coeff)
+    # return random.uniform(mean, max(arrival_coeff))
 
 def arrival(time, ev, FES, bss, stats):
     """
@@ -334,14 +335,14 @@ if __name__ == "__main__":
             previous_time = time
 
         ## DEBUG ##
-        try:
-            print(event, time, '| Busy sock:', sum([s.busy for s in sockets]),
-                  '| Ready:', bss.ready_batteries, '| Queue', len(bss.queue.queue),
-                  '| Canwait: ', ev.can_wait, '| FES:', FES.queue)
-        except :
-            print(event, time, '| Busy sock:', sum([s.busy for s in sockets]),
-                  '| Ready:', bss.ready_batteries, '| Queue', len(bss.queue.queue),
-                  '| FES:', FES.queue)
+        # try:
+        #     print(event, time, '| Busy sock:', sum([s.busy for s in sockets]),
+        #           '| Ready:', bss.ready_batteries, '| Queue', len(bss.queue.queue),
+        #           '| Canwait: ', ev.can_wait, '| FES:', FES.queue)
+        # except :
+        #     print(event, time, '| Busy sock:', sum([s.busy for s in sockets]),
+        #           '| Ready:', bss.ready_batteries, '| Queue', len(bss.queue.queue),
+        #           '| FES:', FES.queue)
 
         if event == "2_arrival":
             resume_charge = arrival(time, ev, FES, bss, stats)
@@ -376,3 +377,7 @@ if __name__ == "__main__":
         Plot(stats.cost.values(), title="Daily cost with PV").plot_by_day()
     else:
         Plot(stats.cost.values(), title="Daily cost without PV").plot_by_day()
+
+    # prob_losses = list(stats.loss.values()) / list(stats.arrivals.values())
+    prob_losses = [i / j for i, j in zip(stats.loss.values(), stats.arrivals.values())]
+    Plot(stats.cost.values(), prob_losses, title="Cost / prob losses").scatter()
