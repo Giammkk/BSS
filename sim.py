@@ -140,6 +140,7 @@ def update_all_batteries(time, bss, stats, QoE=None):
     Since every hour electricity price and PV production change, the charge of
     the batteries must be update with the right parameters.
     """
+    sockets = bss.sockets
     queue = bss.queue
     price = dm.get_prices_electricity(conf.MONTH, conf.DAY, conf.HOUR)
 
@@ -188,12 +189,18 @@ def set_time(QoE, stats):
     QoE.put((60 * (conf.HOUR + 1) + ((conf.DAY - 1) * 24 * 60), "1_change_hour", None))
 
 
-## Main ##
-if __name__ == "__main__":
+def reset_time():
+    conf.DAY = 1
+    conf.HOUR = 0
+    conf.CURRENT_DAY = 1
+    conf.MONTH = 1
 
+
+def simulate():
     warnings.filterwarnings("ignore")
 
     time = 0
+    reset_time()
 
     QoE = PriorityQueue()
     # Schedule the first arrival at t=0
@@ -249,9 +256,14 @@ if __name__ == "__main__":
         elif event == "0_battery_available":
             battery_available(time, QoE, bss, stats)
 
-    # %% Show statistics ##
+    # Print statistics
     print("Mean arrivals: %f" % (np.mean(list(stats.arrivals.values()))))
     print("Mean loss: %f" % (np.mean(list(stats.loss.values()))))
     print("Mean cost: %f" % (np.mean(list(stats.cost.values()))))
 
+    return stats
+
+
+if __name__ == "__main__":
+    stats = simulate()
     stats.plot_stats()

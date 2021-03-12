@@ -29,6 +29,11 @@ class DatasetManager:
         elif (m == 9 and d >= 22) or m == 10 or m == 11 or (m == 12 and d < 21):
             pc = self.prices_fall
 
+        try:
+            a = pc[h]
+        except:
+            print(m,d,h)
+
         return pc[h]
 
     def get_PV_power(self, m, d, h):
