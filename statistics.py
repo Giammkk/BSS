@@ -1,5 +1,6 @@
 from plot import Plot
 import config as conf
+import numpy as np
 
 
 class Statistics:
@@ -45,3 +46,12 @@ class Statistics:
         # prob_losses = list(self.loss.values()) / list(self.arrivals.values())
         prob_losses = [i / j for i, j in zip(self.loss.values(), self.arrivals.values())]
         Plot(self.cost.values(), prob_losses, title="Cost / prob losses").scatter()
+
+
+class AvgStatistics:
+    def __init__(self, r=1, c=1):
+        self.avg_arrivals = np.zeros((r, c))
+        self.avg_loss = np.zeros((r, c))
+        self.avg_cost = np.zeros((r, c))
+        self.avg_avg_ready = np.zeros((r, c))
+        self.avg_avg_wait = np.zeros((r, c))

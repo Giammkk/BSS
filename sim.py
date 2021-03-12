@@ -12,8 +12,6 @@ from data_manager import DatasetManager
 from plot import Plot
 from statistics import Statistics
 
-random.seed(4)
-
 dm = DatasetManager()
 pv_production = dm.get_pv_data()
 
@@ -198,6 +196,7 @@ def reset_time():
 
 def simulate():
     warnings.filterwarnings("ignore")
+    random.seed(1)
 
     time = 0
     reset_time()
