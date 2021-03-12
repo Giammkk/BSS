@@ -1,19 +1,46 @@
 import random
-import config as conf
 from calendar import monthrange
 from queue import PriorityQueue
 
+C      = 0
+CR     = 0
+BTH    = 0
+PV_SET = 0
+TOL    = 0
+F      = 0
+TMAX   = 0
+
+## Check global variables ##
+class ShareGlobals:
+    def __init__(self):
+        pass
+
+    def set_globals(self, C_, CR_, BTH_, PV_SET_, TOL_, F_, TMAX_):
+        global C, CR, BTH, PV_SET, TOL, F, TMAX
+
+        C = C_
+        CR = CR_
+        BTH = BTH_
+        PV_SET = PV_SET_
+        TOL = TOL_
+        F = F_
+        TMAX = TMAX_
+
+    def check(self):
+        print('C:', C, '| CR:', CR, '| BTH:', BTH,
+              '| PV_SET:', PV_SET, '| TOL:', TOL,
+              '| F:', F, '| TMAX:', TMAX)
 
 ## Socket ##
 class Socket:
 
-    def __init__(self):
-        self.bss = None
-        self.battery = None
-        self.busy = False
+    def __init__(self, busy=False):
+        self.busy = busy
         self.is_charging = True
+        self.battery = None
+        self.bss = None
         self.postpone_time = 0
-        self.postpone_timer = int(conf.TMAX / 60)
+        self.postpone_timer = int(TMAX/60)
 
     def plug_battery(self, battery, time):
         self.busy = True
@@ -28,7 +55,6 @@ class Socket:
         self.battery = None
         self.bss.n_charging -= 1
 
-
 ## Battery ##
 class Battery:
 
@@ -39,17 +65,13 @@ class Battery:
         self.booked = False
 
     def update_charge(self, time, PVpower, price):
-        C = conf.C
-        CR = conf.CR
-        PV_SET = conf.PV_SET
-
-        power_update = (time - self.last_update) / 60  # Hours
+        power_update = (time - self.last_update) / 60 # Hours
         if power_update < 0:
             raise Exception('Negative power update')
 
         price_power_update = 0
 
-        if PVpower != 0 and PV_SET:  # Check if the PV has power
+        if PVpower != 0 and PV_SET: # Check if the PV has power
             # Take the power from the PV avoiding the maximum charging rate is exceeded
             if PVpower > CR:
                 power_update *= CR
@@ -63,53 +85,58 @@ class Battery:
                 price_power_update = price * power_update_grid * 1e-6
                 power_update = power_update_grid
         else:
-            power_update *= CR  # Take the power from the grid
+            power_update *= CR # Take the power from the grid
             self.charge = self.charge + power_update
             price_power_update = price * power_update * 1e-6
 
         # print(self.charge, '/', C)
         self.last_update = time
         return price_power_update, power_update
-
-    def time_to_ready(self, time):
-        C = conf.C
-        BTH = conf.BTH
-        CR = conf.CR
-        hour = conf.HOUR  # TODO check if HOUR changes
-        day = conf.DAY
-
-        delta_t = 0
-
-        while True:
-            FC = C if conf.check_high_demand(hour) else BTH  # Full charge
-            time_to_ch = 60 * (hour + 1) + ((day - 1) * 24 * 60) - time  # Time to change hour
-
-            t = (FC - self.charge) * 60 / CR
-            if t > time_to_ch:
-                delta_t += time_to_ch
-
-            elif 0 < t < time_to_ch:
-                delta_t += t
-                return delta_t
-
-            elif t < 0:
-                return delta_t
-
-            hour += 1
-
+    
+    def time_to_ready(self, time, high_demand, day, hour):
+        time_to_ch = 60 * (hour + 1) + ((day - 1) * 24 * 60) - time
+        
+        if high_demand:
+            t = (BTH - self.charge) * 60 / CR
+            t = time_to_ch + 0.001 if t < 0 else t # If battery was not full
+            # in previous not high-demand hour, but higher than Bth
+        else:
+            t = (C - self.charge) * 60 / CR
+                    
+        if t < time_to_ch:
+            return t
+        else:
+            delta_charge = time_to_ch * CR / 60
+            if self.__check_high_demand(hour + 1):
+                if BTH - (self.charge + delta_charge) > 0:
+                    t = time_to_ch + (BTH - (self.charge + delta_charge)) * 60 / CR
+                else:
+                    t = time_to_ch + 0.001
+            else:
+                if C - (self.charge + delta_charge) < 0:
+                    # print("C - (self.charge + delta_charge) < 0")
+                    t = time_to_ch + 0.001
+                else:
+                    t = time_to_ch + (C - (self.charge + delta_charge)) * 60 / CR
+        return t 
+    
+    def __check_high_demand(self, hour):
+        if (8 <= hour < 12) or (16 <= hour < 19):
+            return True
+        else:
+            return False
 
 ## Electric Vehicle ##
 class EV:
     def __init__(self, charge, arrival_time):
-        self.status = "just_arrived"  # "waiting" "served"
+        self.can_wait = 1
         self.battery = Battery(charge=charge)
         self.arrival_time = arrival_time
-        self.service_time = 0  # What time EV is served (used in case of waiting)
-
-    def __lt__(self, other):
+        self.service_time = 0 # What time EV is served (used in case of waiting)
+    
+    def __lt__(self, other): 
         return self.arrival_time < other.arrival_time
-
-
+    
 ## Battery Switch Station ##
 class BSS:
     def __init__(self, sockets=[]):
@@ -117,54 +144,34 @@ class BSS:
         self.queue = PriorityQueue()
         self.n_sockets = len(sockets)
         self.n_charging = 0
-        self.ready_batteries = 0
+        self.cnt = 0
         self.postponed_batteries = 0
-        self.resume_charge_flag = False
+        self.ready_batteries = 0
+        self.power_consumption = 0
 
-    def plug_battery(self, time, battery):
-        for socket in self.sockets:  # Plug battery in the first free socket
-            if not socket.busy:
-                socket.plug_battery(battery, time)
-                break
-
-    def book_battery(self, time):
-        next_ready = 60 * conf.C / conf.CR  # Max time to charge a battery (2h)
-        battery_booked = None
-        socket_booked = None
-
-        for socket in self.sockets:  # Look for a charging battery not booked yet
-            if socket.busy and not socket.battery.booked:
-
-                if socket.battery.time_to_ready(time) < next_ready:
-                    next_ready = socket.battery.time_to_ready(time)
-                    battery_booked = socket.battery  # Book a battery if ready_batteries is 0
-                    socket_booked = socket
-
-        return next_ready, battery_booked, socket_booked
-
-    def postpone_charge(self, time, dm, month, day, hour):
-        h = int((time + conf.TMAX - (conf.DAY - 1) * 24 * 60) / 60)
+    def postpone_charge(self, time, sim_day, dm, month, day, hour, spv, nbss):
+        h = int((time + TMAX - (sim_day-1) * 24 * 60) / 60)
         if h >= hour + 1:
 
-            pv_now = dm.get_PV_power(month, day, hour)
+            pv_now = dm.get_PV_power(month, day, hour, spv, nbss)
             if pv_now == 0:
                 month, day, hour = self.__check_next_hour(month, day, hour)
                 if month == 13:
                     return False
 
-                pv_next_hour = dm.get_PV_power(month, day, hour)
-                price_now = dm.get_prices_electricity(month, day, hour - 1)
+                pv_next_hour = dm.get_PV_power(month, day, hour, spv, nbss)
+                price_now = dm.get_prices_electricity(month, day, hour-1)
                 price_next_hour = dm.get_prices_electricity(month, day, hour)
 
                 # busy_sockets = sum([s.busy for s in self.sockets])
                 if pv_next_hour > 0 or price_now > price_next_hour:
                     ind = 0
-                    while self.postponed_batteries < conf.F and ind < self.n_sockets:
+                    while self.postponed_batteries < F and ind < self.n_sockets:
                         # print(ind)
                         if self.sockets[ind].busy:
                             if not self.sockets[ind].battery.booked:
                                 self.sockets[ind].is_charging = False
-                                # self.cnt += 1
+                                self.cnt += 1
                                 self.n_charging -= 1
                                 self.postponed_batteries += 1
                         ind += 1
@@ -178,7 +185,7 @@ class BSS:
             if s.busy:
                 if not s.is_charging:
                     s.postpone_timer -= 1
-
+                
                 if s.postpone_timer <= 0:
                     s.is_charging = True
                     s.postpone_time += time - s.battery.last_update

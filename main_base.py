@@ -1,177 +1,115 @@
 import random
-from queue import PriorityQueue
-from calendar import monthrange
-from plot import Plot, MultiPlot
-import numpy as np
-from data_manager import DatasetManager
-from components import ShareGlobals, Socket, Battery, EV, BSS
-import warnings
 import sys
+import warnings
+from calendar import monthrange
+from queue import PriorityQueue
+
+import numpy as np
+
+import config as conf
+from components import Socket, Battery, EV, BSS
+from data_manager import DatasetManager
+from plot import Plot
+from statistics import Statistics
 
 random.seed(4)
-
-## Global variables ##
-SIM_TIME = 60*24*365
-DAY = 1                 # Day of the simulation (from 1 to 365)
-HOUR = 0                # Current hour (from 0 to 23)
-CURRENT_DAY = 1         # Current day (from 1 to 30/31/28)
-MONTH = 1               # Current month in the simulation
-C = 40000               # Battery capacity
-TOL = 0.98              # Percentage of charge to be full
-NBSS = 15               # Max number of chargers
-B = 2*NBSS              # Max number of batteries (charging + queue)
-WMAX = 15               # Max waiting time for EV
-BTH = 38000             # Minimum charge level
-CR = int(C/2)           # Charging rate per hour
-PV_SET = 1              # Indicator of presence of a PV in the BSS
-SPV = 100               # Nominal capacity of one PV (kW) * number of panels
-F = NBSS/3              # Fraction of batteries whose charge cannot be postponed
-TMAX = 120               # Maximum time by which the charge process can be postponed
-HIGH_DEMAND = False     # High demand indicator
 
 dm = DatasetManager()
 pv_production = dm.get_pv_data()
 
-## Statistics ##
-class Statistics:
-
-    def __init__(self):
-        self.avg_ready = {i+1:0 for i in range(365)} # Average ready batteries
-        self.last_update = 0
-
-        self.arrivals = {i+1:0 for i in range(365)} # Daily arrivals
-        self.wait_delay = {i+1:0 for i in range(365)} # Daily average waiting delay
-        self.loss = {i+1:0 for i in range(365)} # Daily number of missed services
-        self.avg_wait = {i+1:0 for i in range(365)} # Avg time for EV to wait for to have a full battery
-        self.cost = {i+1:0 for i in range(365)} # Cost of charging batteries
-
-        self.daily_arr = {i:0 for i in range(24)} # Average number of arrivals at each hour
-        self.len_queue = {i+1:0 for i in range(365)} # Mean length of queue
-        self.busy_sockets = {i+1:0 for i in range(365)}
-        self.consumption = {i+1:0 for i in range(365)}
-        self.loss_prob = {i+1:0 for i in range(365)}
-
 
 def next_arrival():
-    arrival_coeff = [30, 30, 30, 30, 20, 15, 13, 10, 5, 8, 15, 15, 3, # 0->13
-                      4, 10, 13, 15, 15, 3, 5, 15, 18, 20, 25] # 14->23
-    return random.expovariate(1 / arrival_coeff[HOUR])
-    # mean = sum(arrival_coeff) / len(arrival_coeff)
-    # return random.uniform(mean, max(arrival_coeff))
+    arrival_coeff = [30, 30, 30, 30, 20, 15, 13, 10, 5, 8, 15, 15, 3,  # 0->13
+                     4, 10, 13, 15, 15, 3, 5, 15, 18, 20, 25]  # 14->23
+    return random.expovariate(1 / arrival_coeff[conf.HOUR])
 
-def arrival(time, ev, FES, bss, stats):
-    """
-    An EV is arrived at the BSS.
-    """
-    sockets = bss.sockets
-    queue = bss.queue
+
+def arrival(time, ev, QoE, bss, stats):
     update_all_batteries(time, bss, stats, 0)
-    next_ready = 60 * C / CR # Max time to charge a battery (2h)
-    can_wait = ev.can_wait
-    resume_charge = 0
-    flag = 0
-    battery_booked = None
 
-    stats.avg_ready[DAY] += bss.ready_batteries
+    if ev.status == "just_arrived":
 
-    if can_wait == 1: # can_wait=0: EV has already arrived and it's waiting
+        stats.daily_arr[conf.HOUR] += 1
+        stats.arrivals[conf.DAY] += 1
+        stats.avg_ready[conf.DAY] += bss.ready_batteries
 
-        stats.daily_arr[HOUR] += 1
-        stats.arrivals[DAY] += 1
+        # Schedule the next arrival
+        QoE.put((time + next_arrival(), "3_arrival", EV(random.gauss(8000, 1000), 0)))
 
-        interarrival = next_arrival() # Schedule the next arrival
-        FES.put((time + interarrival, "2_arrival", EV(random.gauss(8000, 1000), 0)))
+        queue = bss.queue
+        update_all_batteries(time, bss, stats, 0)
 
-        for socket in sockets: # Look for a charging battery not booked yet
-            if socket.busy and not socket.battery.booked:
+        if bss.ready_batteries > 0:
+            bss.ready_batteries -= 1
+            battery = ev.battery
 
-                if socket.battery.time_to_ready(time, HIGH_DEMAND, DAY, HOUR) < next_ready:
-                    next_ready = socket.battery.time_to_ready(time, HIGH_DEMAND, DAY, HOUR)
-                    battery_booked = socket.battery # Book a battery if ready_batteries is 0
-                    socket_booked = socket
+            bss.plug_battery(time, battery)
+
+        else:  # There are no ready batteries
+            next_ready, battery_booked, socket_booked = bss.book_battery(time)
+
+            if battery_booked and next_ready < conf.TMAX:
+                # EV waits
+                stats.avg_wait[conf.DAY] += next_ready
+
+                battery_booked.booked = True
+                socket_booked.is_charging = True  # Reactivate charging if battery has been booked
+                queue.put(ev)
+                ev.status = "waiting"
+                ev.service_time = next_ready + time
+                QoE.put((next_ready + time, "2_serve_queue", ev))
 
             else:
-                flag = 1
+                stats.loss[conf.DAY] += 1
 
-        if not flag:
-            if (next_ready + time, "0_batteryavailable", None) not in FES.queue:
-                FES.put((next_ready + time, "0_batteryavailable", None))
+    if not conf.check_high_demand() and conf.F > 0:
+        r_c = bss.postpone_charge(time, dm, conf.MONTH, conf.CURRENT_DAY, conf.HOUR)
+        bss.resume_charge_flag = r_c
 
-    if bss.ready_batteries > 0 and can_wait != -1:
-        bss.ready_batteries -= 1
 
-        if can_wait == 1:
-            battery = ev.battery
-        else:
-            try:
-                ev = queue.get()
-                ev.can_wait = -1
-            except:
-                print("empty queue", time)
-                sys.exit()
-            battery = ev.battery
+## Serve waiting EV ##
+def serve_queue(time, bss, stats):
+    update_all_batteries(time, bss, stats, 0)
 
-        for socket in sockets: # Plug battery in the first free socket
-            if not socket.busy:
-                socket.plug_battery(battery, time)
-                break
-
-    elif next_ready <= WMAX and can_wait == 1 and battery_booked and len(queue.queue) <= NBSS:
-        # print(DAY, next_ready)
-        stats.avg_wait[DAY] += next_ready
-        battery_booked.booked = True
-        socket_booked.is_charging = True # Reactivate charging if battery has been booked
-        queue.put(ev)
-        ev.can_wait = 0
-        ev.service_time = next_ready + time
-        FES.put((next_ready + time, "2_arrival", ev))
-
-    elif can_wait == -1:
-        # print("can wait -1")
-        pass
-    else:
-        stats.loss[DAY] += 1
-
-    if not HIGH_DEMAND and F > 0:
-        v = bss.postpone_charge(time, DAY, dm, MONTH, CURRENT_DAY, HOUR,
-                            SPV, NBSS)
-        if v:
-            resume_charge = 1
-    return resume_charge
+    ev = bss.queue.get()
+    if ev.status == "waiting":
+        bss.plug_battery(time, ev.battery)
 
 
 ## Departure ##
-def battery_available(time, FES, bss, stats):
+def battery_available(time, QoE, bss, stats):
     """
     One of the batteries is fully charged.
     """
     sockets = bss.sockets
     queue = bss.queue
-    price = dm.get_prices_electricity(MONTH, DAY, HOUR)
-    next_ready = 60 * C / CR
-    resume_charge = 0
+    price = dm.get_prices_electricity(conf.MONTH, conf.DAY, conf.HOUR)
+    next_ready = 60 * conf.C / conf.CR
 
-    stats.len_queue[DAY] += len(queue.queue) * (time - stats.last_update)
-    stats.busy_sockets[DAY] += sum([s.busy for s in sockets]) * (time - stats.last_update)
+    stats.len_queue[conf.DAY] += len(queue.queue) * (time - stats.last_update)
+    stats.busy_sockets[conf.DAY] += sum([s.busy for s in sockets]) * (time - stats.last_update)
 
     # print(HOUR, DAY)
     PVpower = 0
-    if PV_SET:
-        PVpower = dm.get_PV_power(MONTH, CURRENT_DAY, HOUR, SPV, NBSS)
+    if conf.PV_SET:
+        PVpower = dm.get_PV_power(conf.MONTH, conf.CURRENT_DAY, conf.HOUR)
         # Divide the energy produced by the PVs by the active sockets
-        try: # Handle division by zero
+        try:  # Handle division by zero
             PVpower /= sum([s.is_charging * s.busy for s in sockets])
         except:
             pass
+
+    threshold = conf.C if conf.check_high_demand() else conf.BTH
+    threshold *= conf.TOL
 
     for socket in sockets:
         if socket.busy:
             if socket.is_charging:
                 cost, power = socket.battery.update_charge(time, PVpower, price)
-                stats.cost[DAY] += cost
-                stats.consumption[DAY] += power
+                stats.cost[conf.DAY] += cost
+                stats.consumption[conf.DAY] += power
 
-            if HIGH_DEMAND and socket.battery.charge >= BTH * TOL:
+            if socket.battery.charge > threshold:
                 socket.unplug_battery()
                 bss.ready_batteries += 1
 
@@ -180,135 +118,91 @@ def battery_available(time, FES, bss, stats):
                     # print(ev)
                     socket.plug_battery(ev.battery, time)
                     bss.ready_batteries -= 1
-                    ev.can_wait = -1
-
-            if not HIGH_DEMAND and socket.battery.charge >= C * TOL:
-                socket.unplug_battery()
-                bss.ready_batteries += 1
-
-                if not queue.empty():
-                    ev = queue.get()
-                    # print(ev)
-                    socket.plug_battery(ev.battery, time)
-                    bss.ready_batteries -= 1
-                    ev.can_wait = -1
+                    ev.status = "served"
 
     for socket in sockets:
         if socket.busy:
-            next_ready = min(socket.battery.time_to_ready(time, HIGH_DEMAND, DAY, HOUR), next_ready)
+            next_ready = min(socket.battery.time_to_ready(time), next_ready)
 
-    if (next_ready + time, "0_batteryavailable", None) not in FES.queue:
-        FES.put((next_ready + time, "0_batteryavailable", None))
+    if (next_ready + time, "0_battery_available", None) not in QoE.queue:
+        QoE.put((next_ready + time, "0_battery_available", None))
 
     stats.last_update = time
 
-    if not HIGH_DEMAND and F > 0:
-        v = bss.postpone_charge(time, DAY, dm, MONTH, CURRENT_DAY, HOUR,
-                            SPV, NBSS)
-        if v:
-            resume_charge = 1
-    return resume_charge
+    if not conf.check_high_demand() and conf.F > 0:
+        r_c = bss.postpone_charge(time, dm, conf.MONTH, conf.CURRENT_DAY, conf.HOUR)
+        bss.resume_charge_flag = r_c
 
 
 ## Change Hour ##
-def update_all_batteries(time, bss, stats, flag, FES=None):
+def update_all_batteries(time, bss, stats, QoE=None):
     """
     Since every hour electricity price and PV production change, the charge of
     the batteries must be update with the right parameters.
     """
-    sockets = bss.sockets
     queue = bss.queue
-    price = dm.get_prices_electricity(MONTH, DAY, HOUR)
-    check_high_demand(HOUR)
+    price = dm.get_prices_electricity(conf.MONTH, conf.DAY, conf.HOUR)
 
-    stats.len_queue[DAY] += len(queue.queue) * (time - stats.last_update)
-    stats.busy_sockets[DAY] += sum([s.busy for s in sockets]) * (time - stats.last_update)
+    stats.len_queue[conf.DAY] += len(queue.queue) * (time - stats.last_update)
+    stats.busy_sockets[conf.DAY] += sum([s.busy for s in sockets]) * (time - stats.last_update)
 
     PVpower = 0
-    if PV_SET:
-        PVpower = dm.get_PV_power(MONTH, CURRENT_DAY, HOUR, SPV, NBSS)
+    if conf.PV_SET:
+        PVpower = dm.get_PV_power(conf.MONTH, conf.CURRENT_DAY, conf.HOUR)
+
+    threshold = conf.C if conf.check_high_demand() else conf.BTH
+    threshold *= conf.TOL
 
     for socket in sockets:
         if socket.busy and socket.is_charging:
             cost, power = socket.battery.update_charge(time, PVpower, price)
-            stats.cost[DAY] += cost
-            stats.consumption[DAY] += power
+            stats.cost[conf.DAY] += cost
+            stats.consumption[conf.DAY] += power
 
-            if HIGH_DEMAND and socket.battery.charge >= BTH * TOL:
-                socket.unplug_battery()
-                bss.ready_batteries += 1
-
-            if not HIGH_DEMAND and socket.battery.charge >= C * TOL:
+            if socket.battery.charge >= threshold:
                 socket.unplug_battery()
                 bss.ready_batteries += 1
 
     stats.last_update = time
-    if flag:
+    if bss.resume_charge_flag:
         bss.resume_charge(time)
 
-    if FES:
-        set_time(FES, stats)
-    return 0
+    if QoE:
+        set_time(QoE, stats)
+    return
 
 
-def check_high_demand(hour):
-    global HIGH_DEMAND
+def set_time(QoE, stats):
+    conf.HOUR += 1
 
-    if hour==8 or (hour>=12 and hour<15) or (hour>=18 and hour<=19):
-        HIGH_DEMAND = True
-        return HIGH_DEMAND
-    else:
-        HIGH_DEMAND = False
-        return HIGH_DEMAND
+    if conf.HOUR == 24:
+        stats.compute_daily_stats(conf.DAY)
+        conf.HOUR = 0
+        conf.DAY += 1
+        conf.CURRENT_DAY += 1
 
+        if conf.CURRENT_DAY > monthrange(2019, conf.MONTH)[1]:
+            conf.CURRENT_DAY = 1
+            conf.MONTH += 1
 
-def set_time(FES, stats):
-    global HOUR, DAY, CURRENT_DAY, MONTH
+    QoE.put((60 * (conf.HOUR + 1) + ((conf.DAY - 1) * 24 * 60), "1_change_hour", None))
 
-    HOUR += 1
-
-    if HOUR == 24:
-        compute_daily_stats(stats)
-        HOUR = 0
-        DAY += 1
-        CURRENT_DAY += 1
-
-        if CURRENT_DAY > monthrange(2019, MONTH)[1]:
-            CURRENT_DAY = 1
-            MONTH += 1
-
-    FES.put((60 * (HOUR + 1) + ((DAY-1) * 24 * 60), "1_changehour", None))
-
-
-def compute_daily_stats(stats):
-    stats.avg_wait[DAY] = stats.avg_wait[DAY] / stats.arrivals[DAY]
-    stats.avg_ready[DAY] = stats.avg_ready[DAY] / stats.arrivals[DAY]
-    stats.len_queue[DAY] = stats.len_queue[DAY] / (60 * 24)
-    stats.busy_sockets[DAY] = stats.busy_sockets[DAY] / (60 * 24)
-    stats.loss_prob[DAY] = stats.loss[DAY] / stats.arrivals[DAY]
 
 ## Main ##
 if __name__ == "__main__":
 
     warnings.filterwarnings("ignore")
 
-    sg = ShareGlobals()
-    sg.set_globals(C, CR, BTH, PV_SET, TOL, F, TMAX)
-    sg.check()
-
-    if PV_SET:
-        print("SPV: ", SPV)
-
     time = 0
 
-    FES = PriorityQueue()
+    QoE = PriorityQueue()
     # Schedule the first arrival at t=0
-    FES.put((0, "2_arrival", EV(random.gauss(8000, 1000), 0)))
-    FES.put((60, "1_changehour", None))
+    QoE.put((0, "3_arrival", EV(random.gauss(8000, 1000), 0)))
+    QoE.put((60, "1_change_hour", None))
 
     bss = BSS()
     sockets = list()
-    for i in range(NBSS):
+    for i in range(conf.NBSS):
         s = Socket()
         s.bss = bss
         s.plug_battery(Battery(charge=random.gauss(8000, 1000)), time)
@@ -321,10 +215,9 @@ if __name__ == "__main__":
 
     previous_time = -1
 
-    rc_flag = 0
-    while time < SIM_TIME:
+    while time < conf.SIM_TIME:
 
-        (time, event, ev) = FES.get()
+        (time, event, ev) = QoE.get()
         if ev:
             ev.arrival_time = time
 
@@ -338,46 +231,27 @@ if __name__ == "__main__":
         # try:
         #     print(event, time, '| Busy sock:', sum([s.busy for s in sockets]),
         #           '| Ready:', bss.ready_batteries, '| Queue', len(bss.queue.queue),
-        #           '| Canwait: ', ev.can_wait, '| FES:', FES.queue)
+        #           '| Canwait: ', ev.can_wait, '| QoE:', QoE.queue)
         # except :
         #     print(event, time, '| Busy sock:', sum([s.busy for s in sockets]),
         #           '| Ready:', bss.ready_batteries, '| Queue', len(bss.queue.queue),
-        #           '| FES:', FES.queue)
+        #           '| QoE:', QoE.queue)
 
-        if event == "2_arrival":
-            resume_charge = arrival(time, ev, FES, bss, stats)
+        if event == "3_arrival":
+            arrival(time, ev, QoE, bss, stats)
 
-        elif event == "1_changehour":
-            rc_flag = update_all_batteries(time, bss, stats, rc_flag, FES)
+        elif event == "2_serve_queue":
+            serve_queue(time, bss, stats)
 
-        elif event == "0_batteryavailable":
-            resume_charge = battery_available(time, FES, bss, stats)
+        elif event == "1_change_hour":
+            update_all_batteries(time, bss, stats, QoE)
 
-        if resume_charge:
-            rc_flag = 1
+        elif event == "0_battery_available":
+            battery_available(time, QoE, bss, stats)
 
-
-    #%% Show statistics ##
+    # %% Show statistics ##
     print("Mean arrivals: %f" % (np.mean(list(stats.arrivals.values()))))
     print("Mean loss: %f" % (np.mean(list(stats.loss.values()))))
     print("Mean cost: %f" % (np.mean(list(stats.cost.values()))))
 
-
-    Plot([i/365 for i in stats.daily_arr.values()], title="Arrivals by hour").plot_by_hour()
-
-    Plot(stats.arrivals.values(), title="Daily arrivals").plot_by_day()
-    Plot(stats.loss.values(), title="Daily losses").plot_by_day()
-    Plot(stats.avg_wait.values(), title="Daily waiting").plot_by_day()
-    Plot(stats.avg_ready.values(), title="Avg ready batteries").plot_by_day()
-    Plot(stats.len_queue.values(), title="Avg queue length").plot_by_day()
-    Plot(stats.busy_sockets.values(), title="Busy sockets").plot_by_day()
-    Plot(stats.consumption.values(), title="Power consumption").plot_by_day()
-
-    if PV_SET:
-        Plot(stats.cost.values(), title="Daily cost with PV").plot_by_day()
-    else:
-        Plot(stats.cost.values(), title="Daily cost without PV").plot_by_day()
-
-    # prob_losses = list(stats.loss.values()) / list(stats.arrivals.values())
-    prob_losses = [i / j for i, j in zip(stats.loss.values(), stats.arrivals.values())]
-    Plot(stats.cost.values(), prob_losses, title="Cost / prob losses").scatter()
+    stats.plot_stats()
