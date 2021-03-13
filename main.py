@@ -52,13 +52,13 @@ if __name__ == "__main__":
             stats = simulate()
             print("-")
 
-    r = spv_list.index(conf.SPV)
-    c = nbss_list.index(conf.NBSS)
-    stats_by_nbss.avg_arrivals[r][c] = np.mean(list(stats.arrivals.values()))
-    stats_by_nbss.avg_loss[r][c] = np.mean(list(stats.loss.values()))
-    stats_by_nbss.avg_avg_wait[r][c] = np.mean(list(stats.avg_wait.values()))
-    stats_by_nbss.avg_avg_ready[r][c] = np.mean(list(stats.avg_ready.values()))
-    stats_by_nbss.avg_cost[r][c] = np.mean(list(stats.cost.values()))
+            r = spv_list.index(conf.SPV)
+            c = nbss_list.index(conf.NBSS)
+            stats_by_nbss.avg_arrivals[r][c] = np.mean(list(stats.arrivals.values()))
+            stats_by_nbss.avg_loss[r][c] = np.mean(list(stats.loss.values()))
+            stats_by_nbss.avg_avg_wait[r][c] = np.mean(list(stats.avg_wait.values()))
+            stats_by_nbss.avg_avg_ready[r][c] = np.mean(list(stats.avg_ready.values()))
+            stats_by_nbss.avg_cost[r][c] = np.mean(list(stats.cost.values()))
 
     plot_nbss(stats_by_nbss)
 
