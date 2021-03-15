@@ -2,8 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-# import re
-
 class Plot:
     def __init__(self, yvalues, xvalues=[], title="", labels=[],
                  xlabel="", ylabel="", save=0):
@@ -77,7 +75,7 @@ class Plot:
         plt.plot(range(24), self.yvalues, '.-')
 
     def scatter(self):
-        fig = plt.figure()
+        plt.figure()
         plt.grid()
         plt.title(self.title)
 
@@ -86,11 +84,12 @@ class Plot:
         plt.scatter(self.xvalues, self.yvalues)
         plt.show()
 
+
 class MultiPlot(Plot):
 
     # override
     def plot(self, label_axis=""):
-        fig = plt.figure()
+        plt.figure()
         plt.grid()
         plt.title(self.title)
 
@@ -107,7 +106,7 @@ class MultiPlot(Plot):
         plt.show()
 
     def single_plot(self, label_axis=""):
-        fig = plt.figure()
+        plt.figure()
         plt.grid()
         plt.title(self.title)
         plt.xlabel(self.xlabel)

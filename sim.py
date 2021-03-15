@@ -17,9 +17,7 @@ pv_production = dm.get_pv_data()
 
 
 def next_arrival():
-    arrival_coeff = [30, 30, 30, 30, 20, 15, 13, 10, 5, 8, 15, 15, 3,  # 0->13
-                     4, 10, 13, 15, 15, 3, 5, 15, 18, 20, 25]  # 14->23
-    return random.expovariate(1 / arrival_coeff[conf.HOUR])
+    return random.expovariate(1 / conf.arrival_coeff[conf.HOUR])
 
 
 def arrival(time, ev, QoE, bss, stats):

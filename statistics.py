@@ -1,6 +1,7 @@
 from plot import Plot
 import config as conf
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class Statistics:
@@ -32,9 +33,9 @@ class Statistics:
 
         Plot(self.arrivals.values(), title="Daily arrivals").plot_by_day()
         Plot(self.loss.values(), title="Daily losses").plot_by_day()
-        Plot(self.avg_wait.values(), title="Daily waiting").plot_by_day()
-        Plot(self.avg_ready.values(), title="Avg ready batteries").plot_by_day()
-        Plot(self.len_queue.values(), title="Avg queue length").plot_by_day()
+        # Plot(self.avg_wait.values(), title="Daily waiting").plot_by_day()
+        # Plot(self.avg_ready.values(), title="Avg ready batteries").plot_by_day()
+        # Plot(self.len_queue.values(), title="Avg queue length").plot_by_day()
         Plot(self.busy_sockets.values(), title="Busy sockets").plot_by_day()
         Plot(self.consumption.values(), title="Power consumption").plot_by_day()
 
@@ -43,9 +44,17 @@ class Statistics:
         else:
             Plot(self.cost.values(), title="Daily cost without PV").plot_by_day()
 
-        # prob_losses = list(self.loss.values()) / list(self.arrivals.values())
         prob_losses = [i / j for i, j in zip(self.loss.values(), self.arrivals.values())]
         Plot(self.cost.values(), prob_losses, title="Cost / prob losses").scatter()
+
+        mean_cost = np.mean(list(self.cost.values()))
+        mean_prob_loss = np.mean(prob_losses)
+        plt.figure()
+        plt.grid()
+        plt.title("Mean cost / prob loss")
+
+        plt.plot(mean_prob_loss, mean_cost, marker="+", markersize=12, mew=2)
+        plt.show()
 
 
 class AvgStatistics:

@@ -75,7 +75,7 @@ class Battery:
         C = conf.C
         BTH = conf.BTH
         CR = conf.CR
-        hour = conf.HOUR  # TODO check if HOUR changes
+        hour = conf.HOUR
         day = conf.DAY
 
         delta_t = 0
