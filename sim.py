@@ -44,7 +44,7 @@ def arrival(time, ev, QoE, bss, stats):
         else:  # There are no ready batteries
             next_ready, battery_booked, socket_booked = bss.book_battery(time)
 
-            if battery_booked and next_ready < conf.TMAX:
+            if battery_booked and next_ready < conf.WMAX:
                 # EV waits
                 stats.avg_wait[conf.DAY] += next_ready
 

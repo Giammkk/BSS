@@ -47,14 +47,14 @@ class Statistics:
         prob_losses = [i / j for i, j in zip(self.loss.values(), self.arrivals.values())]
         Plot(self.cost.values(), prob_losses, title="Cost / prob losses").scatter()
 
-        mean_cost = np.mean(list(self.cost.values()))
-        mean_prob_loss = np.mean(prob_losses)
-        plt.figure()
-        plt.grid()
-        plt.title("Mean cost / prob loss")
-
-        plt.plot(mean_prob_loss, mean_cost, marker="+", markersize=12, mew=2)
-        plt.show()
+        # mean_cost = np.mean(list(self.cost.values()))
+        # mean_prob_loss = np.mean(prob_losses)
+        # plt.figure()
+        # plt.grid()
+        # plt.title("Mean cost / prob loss")
+        #
+        # plt.plot(mean_prob_loss, mean_cost, marker="+", markersize=12, mew=2)
+        # plt.show()
 
 
 class AvgStatistics:
@@ -64,3 +64,21 @@ class AvgStatistics:
         self.avg_cost = np.zeros((r, c))
         self.avg_avg_ready = np.zeros((r, c))
         self.avg_avg_wait = np.zeros((r, c))
+        self.avg_loss_prob = np.zeros((r, c))
+
+    def compute_avg(self, stats, r=1, c=0):
+        if c > 0:
+            self.avg_arrivals[r][c] = np.mean(list(stats.arrivals.values()))
+            self.avg_loss[r][c] = np.mean(list(stats.loss.values()))
+            self.avg_avg_wait[r][c] = np.mean(list(stats.avg_wait.values()))
+            self.avg_avg_ready[r][c] = np.mean(list(stats.avg_ready.values()))
+            self.avg_cost[r][c] = np.mean(list(stats.cost.values()))
+            self.avg_loss_prob[r][c] = np.mean(list(stats.loss_prob.values()))
+
+        elif c == 0:
+            self.avg_arrivals[r] = np.mean(list(stats.arrivals.values()))
+            self.avg_loss[r] = np.mean(list(stats.loss.values()))
+            self.avg_avg_wait[r] = np.mean(list(stats.avg_wait.values()))
+            self.avg_avg_ready[r] = np.mean(list(stats.avg_ready.values()))
+            self.avg_cost[r] = np.mean(list(stats.cost.values()))
+            self.avg_loss_prob[r] = np.mean(list(stats.loss_prob.values()))

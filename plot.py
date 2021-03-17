@@ -97,7 +97,7 @@ class MultiPlot(Plot):
         plt.xlim((-0.1, xlen - 1 + 0.1))
         plt.ylim((np.min(self.yvalues) - 1, np.max(self.yvalues) + 2))
 
-        plt.xticks(ticks=range(xlen), labels=self.labels)
+        # plt.xticks(ticks=range(xlen), labels=self.labels)
 
         for i in range(self.yvalues.shape[1]):
             plt.plot(range(xlen), self.yvalues[:, i], label=label_axis + " " + str((i + 1) * 5))
@@ -112,13 +112,32 @@ class MultiPlot(Plot):
         plt.xlabel(self.xlabel)
 
         xlen = self.yvalues.shape[0]
-        plt.xlim((-0.1, xlen - 1 + 0.1))
-        plt.ylim((np.min(self.yvalues) - 1, np.max(self.yvalues) + 2))
+        # plt.xlim((-0.1, xlen - 1 + 0.1))
+        # plt.ylim((np.min(self.yvalues) - 1, np.max(self.yvalues) + 2))
 
-        plt.xticks(ticks=range(0, xlen, 5), labels=list(self.labels[0: xlen: 5]), rotation=45)
+        # plt.xticks(ticks=range(0, xlen, 5), labels=list(self.labels[0: xlen: 5]), rotation=45)
 
         for i in range(self.yvalues.shape[1]):
-            plt.plot(range(xlen), self.yvalues[:, i], label=label_axis + " " + str((i + 1) * 5))
+            plt.plot(range(xlen), self.yvalues[:, i])#, label=label_axis + " " + str((i + 1) * 5))
 
         # plt.legend()
+        plt.show()
+
+    def plot_cost_prob_loss(self, label):
+        x = self.xvalues[:, 0]
+        y = self.yvalues[:, 0]
+
+        fig = plt.figure()
+        plt.grid()
+        plt.title(self.title)
+        plt.xlabel("Loss Probability")
+        plt.ylabel("Daily Mean Cost")
+
+        ax = fig.add_subplot()
+
+        for i, txt in enumerate(label):
+            ax.annotate(txt, (x[i], y[i]))
+
+        for j in range(self.yvalues.shape[0]):
+            plt.plot(x[j], y[j], marker="+", markersize=12, mew=2)
         plt.show()
