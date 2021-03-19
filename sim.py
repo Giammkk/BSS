@@ -17,7 +17,7 @@ pv_production = dm.get_pv_data()
 
 
 def next_arrival():
-    return random.expovariate(1 / conf.arrival_coeff[conf.HOUR])
+    return random.expovariate(1 / conf.arrival_rate[conf.HOUR])
 
 
 def arrival(time, ev, QoE, bss, stats):
@@ -195,7 +195,6 @@ def reset_time():
 def simulate():
     warnings.filterwarnings("ignore")
     random.seed(1)
-
     time = 0
     reset_time()
 
@@ -214,6 +213,8 @@ def simulate():
     bss.sockets = sockets
     bss.n_charging = len(sockets)
     bss.n_sockets = len(sockets)
+
+    random.seed(1)
 
     stats = Statistics()
 

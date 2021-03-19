@@ -88,19 +88,17 @@ class Plot:
 class MultiPlot(Plot):
 
     # override
-    def plot(self, label_axis=""):
+    def plot(self, legend_labels):
         plt.figure()
         plt.grid()
         plt.title(self.title)
+        plt.xlabel(self.xlabel)
 
-        xlen = self.yvalues.shape[0]
-        plt.xlim((-0.1, xlen - 1 + 0.1))
         plt.ylim((np.min(self.yvalues) - 1, np.max(self.yvalues) + 2))
 
-        # plt.xticks(ticks=range(xlen), labels=self.labels)
 
-        for i in range(self.yvalues.shape[1]):
-            plt.plot(range(xlen), self.yvalues[:, i], label=label_axis + " " + str((i + 1) * 5))
+        for i in range(self.yvalues.shape[0]):
+            plt.plot(self.xvalues, self.yvalues[i, :], ".-",label=self.labels + " " + str(legend_labels[i]))
 
         plt.legend()
         plt.show()
@@ -118,8 +116,7 @@ class MultiPlot(Plot):
         # plt.xticks(ticks=range(0, xlen, 5), labels=list(self.labels[0: xlen: 5]), rotation=45)
 
         for i in range(self.yvalues.shape[1]):
-            plt.plot(range(xlen), self.yvalues[:, i])#, label=label_axis + " " + str((i + 1) * 5))
-
+            plt.plot(range(xlen), self.yvalues[:, i])
         # plt.legend()
         plt.show()
 

@@ -15,12 +15,13 @@ SPV = 40  # Nominal capacity of one PV (kW) * number of panels
 F = NBSS / 3  # Fraction of batteries whose charge can be postponed
 TMAX = 20  # Maximum time by which the charge process can be postponed
 
-arrival_coeff = [30, 30, 30, 30, 20, 15, 13, 10, 5, 8, 15, 15, 3,  # 0->13
-                 4, 10, 13, 15, 15, 3, 5, 15, 18, 20, 25]  # 14->23
+arrival_rate = [30, 30, 30, 30, 20, 15, 13, 10, 5, 8, 15, 15, 3,  # 0->13
+                4, 10, 13, 15, 15, 3, 5, 15, 18, 20, 25]  # 14->23
 
-# arrival_coeff = [30, 30, 30, 30, 20, 15, 13, 10, 3, 6, 12, 15, 15,
-#                      15, 12, 13, 10, 3, 5, 7, 15, 18, 20, 25]
+arrival_rate_2 = [29, 29, 29, 26, 20, 15, 13, 10, 2.5, 6, 11, 13, 15,
+                  15, 12, 13, 10, 2.5, 5, 7, 15, 18, 20, 25]
 
+arrival_rate_3 = [10] * 24
 
 def check_high_demand(hour=HOUR):
     if hour == 8 or (12 <= hour < 15) or (18 <= hour <= 19):

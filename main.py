@@ -10,24 +10,15 @@ def reset_parameters():
     conf.SPV = 100
     conf.BTH = 38000
     conf.TMAX = 20
-    conf.F = 2 * conf.NBSS / 3
+    conf.F = 0 #2 * conf.NBSS / 3
 
 
-def plot_tmaxf(stats_by_tmaxf):
-    MultiPlot(stats_by_tmaxf.avg_arrivals.T, title="Arrivals", labels=f_list).plot("TMAX")
-    MultiPlot(stats_by_tmaxf.avg_loss.T, title="Losses", labels=f_list).plot("TMAX")
-    MultiPlot(stats_by_tmaxf.avg_avg_wait.T, title="Waiting", labels=f_list).plot("TMAX")
-    MultiPlot(stats_by_tmaxf.avg_avg_ready.T, title="Average ready", labels=f_list).plot("TMAX")
-    MultiPlot(stats_by_tmaxf.avg_cost.T, title="Costs", labels=f_list).plot("TMAX")
-
-
-def plot_nbss(stats_by_nbss, label):
-    MultiPlot(stats_by_nbss.avg_arrivals, title="Arrivals", labels=spv_list).plot()
-    MultiPlot(stats_by_nbss.avg_loss, title="Losses", labels=spv_list).plot()
-    MultiPlot(stats_by_nbss.avg_avg_wait, title="Waiting", labels=spv_list).plot()
-    MultiPlot(stats_by_nbss.avg_avg_ready, title="Average ready", labels=spv_list).plot()
-    MultiPlot(stats_by_nbss.avg_cost, title="Costs", labels=spv_list).plot()
-    # MultiPlot(stats_by_nbss.avg_cost, stats_by_nbss.avg_loss_prob, title="Cost / prob loss").plot_cost_prob_loss(label)
+def multi_plot(stats, x, legend_values, xlabel, legend_label):
+    MultiPlot(stats.avg_arrivals, xvalues=x, title="Arrivals", labels=legend_label, xlabel=xlabel).plot(legend_values)
+    MultiPlot(stats.avg_loss, xvalues=x, title="Losses", labels=legend_label, xlabel=xlabel).plot(legend_values)
+    MultiPlot(stats.avg_avg_wait, xvalues=x, title="Avg wait", labels=legend_label, xlabel=xlabel).plot(legend_values)
+    MultiPlot(stats.avg_avg_ready, xvalues=x, title="Avg ready batteries", labels=legend_label, xlabel=xlabel).plot(legend_values)
+    MultiPlot(stats.avg_cost, xvalues=x, title="Costs", labels=legend_label, xlabel=xlabel).plot(legend_values)
 
 
 def plot_stats(stats, params, label):
@@ -45,13 +36,13 @@ if __name__ == "__main__":
     # SPV / NBSS
     spv_list = list(range(0, 40, 5))
     spv_list.append(100)
-    nbss_list = list(range(5, 15, 5))
-    stats_by_nbss = AvgStatistics(len(nbss_list), len(spv_list))
+    nbss_list = list(range(5, 35, 5))
+    stats_by_nbss = AvgStatistics( len(nbss_list), len(spv_list))
     stats_by_spv = AvgStatistics(r=len(spv_list))
 
     # F / TMAX
     f_list = range(1, 14)
-    tmax_list = range(60, 60 * 7, 60)
+    tmax_list = range(10, 70, 10)
     stats_by_tmaxf = AvgStatistics(len(tmax_list), len(f_list))
     stats_by_f = AvgStatistics(r=len(f_list))
     stats_by_Tmax = AvgStatistics(r=len(tmax_list))
@@ -59,6 +50,10 @@ if __name__ == "__main__":
     # BTH
     bth_list = range(int(conf.C / 2), conf.C, 1000)
     stats_by_bth = AvgStatistics(r=len(bth_list))
+
+    # ARRIVAL_COEFF
+    arrival_list = [conf.arrival_rate, conf.arrival_rate_2, conf.arrival_rate_3]
+    stats_by_arr_rate = AvgStatistics(r=len(arrival_list))
 
     # for spv in spv_list:
     #     for nbss in nbss_list:
@@ -69,7 +64,7 @@ if __name__ == "__main__":
     #
     #         stats_by_nbss.compute_avg(stats, nbss_list.index(conf.NBSS), spv_list.index(conf.SPV))
     #
-    # plot_nbss(stats_by_nbss, spv_list)
+    # multi_plot(stats_by_nbss, spv_list, nbss_list, "SPV", "NBSS")
 
     # for spv in spv_list:
     #     conf.SPV = spv
@@ -98,7 +93,7 @@ if __name__ == "__main__":
     #
     #         stats_by_tmaxf.compute_avg(stats, tmax_list.index(conf.TMAX), f_list.index(conf.F))
     #
-    # plot_tmaxf(stats_by_tmaxf)
+    # multi_plot(stats_by_tmaxf, f_list, tmax_list, "F", "TMAX")
 
     # for f in f_list:
     #     conf.F = f
@@ -109,11 +104,20 @@ if __name__ == "__main__":
     #
     # plot_stats(stats_by_f, f_list, "F")
 
-    for tmax in tmax_list:
-        conf.TMAX = tmax
+    # for tmax in tmax_list:
+    #     conf.TMAX = tmax
+    #     stats = simulate()
+    #     print("-")
+    #
+    #     stats_by_Tmax.compute_avg(stats, tmax_list.index(conf.TMAX))
+    #
+    # plot_stats(stats_by_Tmax, tmax_list, "TMAX")
+
+    for i in range(len(arrival_list)):
+        conf.arrival_rate = arrival_list[i]
         stats = simulate()
         print("-")
 
-        stats_by_Tmax.compute_avg(stats, tmax_list.index(conf.TMAX))
+        stats_by_arr_rate.compute_avg(stats, i)
 
-    plot_stats(stats_by_Tmax, tmax_list, "TMAX")
+    plot_stats(stats_by_arr_rate, ["3 peaks", "2 peaks", "Fixed coeff"], "")

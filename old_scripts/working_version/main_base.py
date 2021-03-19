@@ -56,8 +56,8 @@ def next_arrival():
     arrival_coeff = [30, 30, 30, 30, 20, 15, 13, 10, 5, 8, 15, 15, 3, # 0->13
                       4, 10, 13, 15, 15, 3, 5, 15, 18, 20, 25] # 14->23
     return random.expovariate(1 / arrival_coeff[HOUR])
-    # mean = sum(arrival_coeff) / len(arrival_coeff)
-    # return random.uniform(mean, max(arrival_coeff))
+    # mean = sum(arrival_rate) / len(arrival_rate)
+    # return random.uniform(mean, max(arrival_rate))
 
 def arrival(time, ev, FES, bss, stats):
     """
