@@ -22,12 +22,12 @@ def multi_plot(stats, x, legend_values, xlabel, legend_label):
 
 
 def plot_stats(stats, params, label):
-    MultiPlot(stats.avg_arrivals, title="Arrivals", labels=params, xlabel=label).single_plot()
-    MultiPlot(stats.avg_loss, title="Losses", labels=params, xlabel=label).single_plot()
-    MultiPlot(stats.avg_avg_wait, title="Waiting", labels=params, xlabel=label).single_plot()
-    MultiPlot(stats.avg_avg_ready, title="Average ready", labels=params, xlabel=label).single_plot()
-    MultiPlot(stats.avg_cost, title="Costs", labels=params, xlabel=label).single_plot()
-    MultiPlot(stats.avg_cost, stats.avg_loss_prob, title="Cost / prob loss").plot_cost_prob_loss(params)
+    MultiPlot(stats.avg_arrivals, title="Arrivals", xvalues=params, labels=label).single_plot()
+    MultiPlot(stats.avg_loss, title="Losses", xvalues=params, labels=label).single_plot()
+    MultiPlot(stats.avg_avg_wait, title="Waiting", xvalues=params, labels=label).single_plot()
+    MultiPlot(stats.avg_avg_ready, title="Average ready", xvalues=params, labels=label).single_plot()
+    MultiPlot(stats.avg_cost, title="Costs", xvalues=params, labels=label).single_plot()
+    MultiPlot(stats.avg_cost, stats.avg_loss_prob, title="Cost / prob loss").plot_cost_prob_loss(label)
 
 
 if __name__ == "__main__":
@@ -84,16 +84,16 @@ if __name__ == "__main__":
     #
     # plot_stats(stats_by_bth, bth_list, "Bth")
 
-    # for tmax in tmax_list:
-    #     for f in f_list:
-    #         conf.TMAX = tmax
-    #         conf.F = f
-    #         stats = simulate()
-    #         print("-")
-    #
-    #         stats_by_tmaxf.compute_avg(stats, tmax_list.index(conf.TMAX), f_list.index(conf.F))
-    #
-    # multi_plot(stats_by_tmaxf, f_list, tmax_list, "F", "TMAX")
+    for tmax in tmax_list:
+        for f in f_list:
+            conf.TMAX = tmax
+            conf.F = f
+            stats = simulate()
+            print("-")
+
+            stats_by_tmaxf.compute_avg(stats, tmax_list.index(conf.TMAX), f_list.index(conf.F))
+
+    multi_plot(stats_by_tmaxf, f_list, tmax_list, "F", "TMAX")
 
     # for f in f_list:
     #     conf.F = f
@@ -113,11 +113,11 @@ if __name__ == "__main__":
     #
     # plot_stats(stats_by_Tmax, tmax_list, "TMAX")
 
-    for i in range(len(arrival_list)):
-        conf.arrival_rate = arrival_list[i]
-        stats = simulate()
-        print("-")
-
-        stats_by_arr_rate.compute_avg(stats, i)
-
-    plot_stats(stats_by_arr_rate, ["3 peaks", "2 peaks", "Fixed coeff"], "")
+    # for i in range(len(arrival_list)):
+    #     conf.arrival_rate = arrival_list[i]
+    #     stats = simulate()
+    #     print("-")
+    #
+    #     stats_by_arr_rate.compute_avg(stats, i)
+    #
+    # plot_stats(stats_by_arr_rate, list(range(3)), ["3 peaks", "2 peaks", "Fixed coeff"])

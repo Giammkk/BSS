@@ -127,18 +127,30 @@ class BSS:
                 socket.plug_battery(battery, time)
                 break
 
-    def book_battery(self, time):
+    def book_battery(self, time, wmax):
         next_ready = 60 * conf.C / conf.CR  # Max time to charge a battery (2h)
         battery_booked = None
         socket_booked = None
 
         for socket in self.sockets:  # Look for a charging battery not booked yet
-            if socket.busy and not socket.battery.booked:
+            if socket.busy and socket.is_charging and not socket.battery.booked:
 
                 if socket.battery.time_to_ready(time) < next_ready:
                     next_ready = socket.battery.time_to_ready(time)
                     battery_booked = socket.battery  # Book a battery if ready_batteries is 0
                     socket_booked = socket
+
+        if battery_booked and next_ready < wmax:
+            return next_ready, battery_booked, socket_booked
+        else:
+            # Comment else condition if EV cannot take postponed batteries
+            for socket in self.sockets:
+                if socket.busy and not socket.battery.booked:
+
+                    if socket.battery.time_to_ready(time) < next_ready:
+                        next_ready = socket.battery.time_to_ready(time)
+                        battery_booked = socket.battery
+                        socket_booked = socket
 
         return next_ready, battery_booked, socket_booked
 

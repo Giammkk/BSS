@@ -7,7 +7,7 @@ C = 40000  # Battery capacity
 TOL = 0.98  # Percentage of charge to be full
 NBSS = 15  # Max number of chargers
 B = 2 * NBSS  # Max number of batteries (charging + queue)
-WMAX = 15  # Max waiting time for EV
+WMAX = 20  # Max waiting time for EV
 BTH = 38000  # Minimum charge level
 CR = int(C / 2)  # Charging rate per hour
 PV_SET = 1  # Indicator of presence of a PV in the BSS
@@ -22,6 +22,7 @@ arrival_rate_2 = [29, 29, 29, 26, 20, 15, 13, 10, 2.5, 6, 11, 13, 15,
                   15, 12, 13, 10, 2.5, 5, 7, 15, 18, 20, 25]
 
 arrival_rate_3 = [10] * 24
+
 
 def check_high_demand(hour=HOUR):
     if hour == 8 or (12 <= hour < 15) or (18 <= hour <= 19):

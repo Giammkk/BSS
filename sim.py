@@ -33,7 +33,7 @@ def arrival(time, ev, QoE, bss, stats):
         QoE.put((time + next_arrival(), "3_arrival", EV(random.gauss(8000, 1000), 0)))
 
         queue = bss.queue
-        update_all_batteries(time, bss, stats, 0)
+        # update_all_batteries(time, bss, stats, 0) # DELETE
 
         if bss.ready_batteries > 0:
             bss.ready_batteries -= 1
@@ -42,7 +42,7 @@ def arrival(time, ev, QoE, bss, stats):
             bss.plug_battery(time, battery)
 
         else:  # There are no ready batteries
-            next_ready, battery_booked, socket_booked = bss.book_battery(time)
+            next_ready, battery_booked, socket_booked = bss.book_battery(time, conf.WMAX)
 
             if battery_booked and next_ready < conf.WMAX:
                 # EV waits

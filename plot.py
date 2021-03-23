@@ -103,20 +103,18 @@ class MultiPlot(Plot):
         plt.legend()
         plt.show()
 
-    def single_plot(self, label_axis=""):
-        plt.figure()
+    def single_plot(self):
+        fig = plt.figure()
         plt.grid()
         plt.title(self.title)
         plt.xlabel(self.xlabel)
 
-        xlen = self.yvalues.shape[0]
-        # plt.xlim((-0.1, xlen - 1 + 0.1))
-        # plt.ylim((np.min(self.yvalues) - 1, np.max(self.yvalues) + 2))
+        ax = fig.add_subplot()
 
-        # plt.xticks(ticks=range(0, xlen, 5), labels=list(self.labels[0: xlen: 5]), rotation=45)
+        for i, txt in enumerate(self.labels):
+            ax.annotate(txt, (self.xvalues[i], self.yvalues[i]))
 
-        for i in range(self.yvalues.shape[1]):
-            plt.plot(range(xlen), self.yvalues[:, i])
+        plt.plot(self.xvalues, self.yvalues)
         # plt.legend()
         plt.show()
 
