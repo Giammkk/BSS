@@ -31,9 +31,8 @@ class Plot:
         plt.title(self.title)
 
         plt.xlim((0, 365))
-        plt.ylim((min(self.yvalues), max(self.yvalues) + 2))
+        # plt.ylim((min(self.yvalues), max(self.yvalues) + 2))
 
-        # if re.search(".*(C|c)ost.*", self.title):
         plt.axvline(80, linestyle='--', c='r')
         plt.axvline(172, linestyle='--', c='r')
         plt.axvline(265, linestyle='--', c='r')
@@ -53,11 +52,14 @@ class Plot:
         ax.grid(which='major', alpha=0.5)
 
         plt.plot(range(365), self.yvalues)
+        if len(self.xvalues):
+            plt.plot(range(365), self.xvalues)
 
         if self.save:
             plt.savefig(f"plots/{self.title}.png")
 
         plt.show()
+
 
     def plot_by_hour(self):
         fig = plt.figure()
@@ -114,7 +116,7 @@ class MultiPlot(Plot):
         for i, txt in enumerate(self.labels):
             ax.annotate(txt, (self.xvalues[i], self.yvalues[i]))
 
-        plt.plot(self.xvalues, self.yvalues)
+        plt.plot(self.xvalues, self.yvalues, ".-")
         # plt.legend()
         plt.show()
 

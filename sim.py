@@ -88,7 +88,8 @@ def battery_available(time, QoE, bss, stats):
     # print(HOUR, DAY)
     PVpower = 0
     if conf.PV_SET:
-        PVpower = dm.get_PV_power(conf.MONTH, conf.CURRENT_DAY, conf.HOUR)
+        n = sum([s.is_charging for s in sockets])
+        PVpower = dm.get_PV_power(conf.MONTH, conf.CURRENT_DAY, conf.HOUR, n)
         # Divide the energy produced by the PVs by the active sockets
         try:  # Handle division by zero
             PVpower /= sum([s.is_charging * s.busy for s in sockets])
@@ -104,6 +105,7 @@ def battery_available(time, QoE, bss, stats):
                 cost, power = socket.battery.update_charge(time, PVpower, price)
                 stats.cost[conf.DAY] += cost
                 stats.consumption[conf.DAY] += power
+                stats.spv_production[conf.DAY] += PVpower
 
             if socket.battery.charge > threshold:
                 socket.unplug_battery()
@@ -145,7 +147,8 @@ def update_all_batteries(time, bss, stats, QoE=None):
 
     PVpower = 0
     if conf.PV_SET:
-        PVpower = dm.get_PV_power(conf.MONTH, conf.CURRENT_DAY, conf.HOUR)
+        n = sum([s.is_charging for s in sockets])
+        PVpower = dm.get_PV_power(conf.MONTH, conf.CURRENT_DAY, conf.HOUR, n)
 
     threshold = conf.C if conf.check_high_demand() else conf.BTH
     threshold *= conf.TOL
@@ -155,6 +158,7 @@ def update_all_batteries(time, bss, stats, QoE=None):
             cost, power = socket.battery.update_charge(time, PVpower, price)
             stats.cost[conf.DAY] += cost
             stats.consumption[conf.DAY] += power
+            stats.spv_production[conf.DAY] += PVpower
 
             if socket.battery.charge >= threshold:
                 socket.unplug_battery()
@@ -258,6 +262,8 @@ def simulate():
     print("Mean arrivals: %f" % (np.mean(list(stats.arrivals.values()))))
     print("Mean loss: %f" % (np.mean(list(stats.loss.values()))))
     print("Mean cost: %f" % (np.mean(list(stats.cost.values()))))
+    print("Mean consumption: %f" % (np.mean(list(stats.consumption.values()))))
+    print("Max SPV: %f" % max(list(stats.spv_production.values())))
 
     return stats
 

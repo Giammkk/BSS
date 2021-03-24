@@ -31,5 +31,5 @@ class DatasetManager:
 
         return pc[h]
 
-    def get_PV_power(self, m, d, h):
-        return self.pv_production[str(m)][str(d)][str(h)] * conf.SPV / conf.NBSS
+    def get_PV_power(self, m, d, h, n=conf.NBSS):
+        return self.pv_production[str(m)][str(d)][str(h)] * conf.SPV / n

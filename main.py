@@ -27,6 +27,7 @@ def plot_stats(stats, params, label):
     MultiPlot(stats.avg_avg_wait, title="Waiting", xvalues=params, labels=label).single_plot()
     MultiPlot(stats.avg_avg_ready, title="Average ready", xvalues=params, labels=label).single_plot()
     MultiPlot(stats.avg_cost, title="Costs", xvalues=params, labels=label).single_plot()
+    MultiPlot(stats.avg_consumption, title="Consumption", xvalues=params, labels=label).single_plot()
     MultiPlot(stats.avg_cost, stats.avg_loss_prob, title="Cost / prob loss").plot_cost_prob_loss(label)
 
 
@@ -66,14 +67,14 @@ if __name__ == "__main__":
     #
     # multi_plot(stats_by_nbss, spv_list, nbss_list, "SPV", "NBSS")
 
-    # for spv in spv_list:
-    #     conf.SPV = spv
-    #     stats = simulate()
-    #     print("-")
-    #
-    #     stats_by_spv.compute_avg(stats, spv_list.index(conf.SPV))
-    #
-    # plot_stats(stats_by_spv, spv_list, "SPV")
+    for spv in spv_list:
+        conf.SPV = spv
+        stats = simulate()
+        print("-")
+
+        stats_by_spv.compute_avg(stats, spv_list.index(conf.SPV))
+
+    plot_stats(stats_by_spv, spv_list, spv_list)
 
     # for bth in bth_list:
     #     conf.BTH = bth
@@ -84,16 +85,16 @@ if __name__ == "__main__":
     #
     # plot_stats(stats_by_bth, bth_list, "Bth")
 
-    for tmax in tmax_list:
-        for f in f_list:
-            conf.TMAX = tmax
-            conf.F = f
-            stats = simulate()
-            print("-")
-
-            stats_by_tmaxf.compute_avg(stats, tmax_list.index(conf.TMAX), f_list.index(conf.F))
-
-    multi_plot(stats_by_tmaxf, f_list, tmax_list, "F", "TMAX")
+    # for tmax in tmax_list:
+    #     for f in f_list:
+    #         conf.TMAX = tmax
+    #         conf.F = f
+    #         stats = simulate()
+    #         print("-")
+    #
+    #         stats_by_tmaxf.compute_avg(stats, tmax_list.index(conf.TMAX), f_list.index(conf.F))
+    #
+    # multi_plot(stats_by_tmaxf, f_list, tmax_list, "F", "TMAX")
 
     # for f in f_list:
     #     conf.F = f

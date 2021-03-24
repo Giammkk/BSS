@@ -1,7 +1,6 @@
 from plot import Plot
 import config as conf
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 class Statistics:
@@ -20,6 +19,7 @@ class Statistics:
         self.busy_sockets = {i + 1: 0 for i in range(365)}
         self.consumption = {i + 1: 0 for i in range(365)}
         self.loss_prob = {i + 1: 0 for i in range(365)}
+        self.spv_production = {i + 1: 0 for i in range(365)}
 
     def compute_daily_stats(self, day):
         self.avg_wait[day] = self.avg_wait[day] / self.arrivals[day]
@@ -36,8 +36,8 @@ class Statistics:
         # Plot(self.avg_wait.values(), title="Daily waiting").plot_by_day()
         # Plot(self.avg_ready.values(), title="Avg ready batteries").plot_by_day()
         # Plot(self.len_queue.values(), title="Avg queue length").plot_by_day()
-        Plot(self.busy_sockets.values(), title="Busy sockets").plot_by_day()
-        Plot(self.consumption.values(), title="Power consumption").plot_by_day()
+        # Plot(self.busy_sockets.values(), title="Busy sockets").plot_by_day()
+        Plot(self.consumption.values(), self.spv_production.values(), title="Energy consumption").plot_by_day()
 
         if conf.PV_SET:
             Plot(self.cost.values(), title="Daily cost with PV").plot_by_day()
@@ -46,15 +46,6 @@ class Statistics:
 
         prob_losses = [i / j for i, j in zip(self.loss.values(), self.arrivals.values())]
         Plot(self.cost.values(), prob_losses, title="Cost / prob losses").scatter()
-
-        # mean_cost = np.mean(list(self.cost.values()))
-        # mean_prob_loss = np.mean(prob_losses)
-        # plt.figure()
-        # plt.grid()
-        # plt.title("Mean cost / prob loss")
-        #
-        # plt.plot(mean_prob_loss, mean_cost, marker="+", markersize=12, mew=2)
-        # plt.show()
 
 
 class AvgStatistics:
@@ -65,6 +56,7 @@ class AvgStatistics:
         self.avg_avg_ready = np.zeros((r, c))
         self.avg_avg_wait = np.zeros((r, c))
         self.avg_loss_prob = np.zeros((r, c))
+        self.avg_consumption = np.zeros((r, c))
 
     def compute_avg(self, stats, r=1, c=0):
         if c > 0:
@@ -74,6 +66,7 @@ class AvgStatistics:
             self.avg_avg_ready[r][c] = np.mean(list(stats.avg_ready.values()))
             self.avg_cost[r][c] = np.mean(list(stats.cost.values()))
             self.avg_loss_prob[r][c] = np.mean(list(stats.loss_prob.values()))
+            self.avg_consumption[r][c] = np.mean(list(stats.consumption.values()))
 
         elif c == 0:
             self.avg_arrivals[r] = np.mean(list(stats.arrivals.values()))
@@ -82,3 +75,4 @@ class AvgStatistics:
             self.avg_avg_ready[r] = np.mean(list(stats.avg_ready.values()))
             self.avg_cost[r] = np.mean(list(stats.cost.values()))
             self.avg_loss_prob[r] = np.mean(list(stats.loss_prob.values()))
+            self.avg_consumption[r] = np.mean(list(stats.consumption.values()))
