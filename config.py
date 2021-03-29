@@ -11,7 +11,7 @@ WMAX = 20  # Max waiting time for EV
 BTH = 38000  # Minimum charge level
 CR = int(C / 2)  # Charging rate per hour
 PV_SET = 1  # Indicator of presence of a PV in the BSS
-SPV = 100  # Nominal capacity of one PV (kW) * number of panels
+SPV = 10  # Nominal capacity of one PV (kW) * number of panels
 F = NBSS / 3  # Fraction of batteries whose charge can be postponed
 TMAX = 20  # Maximum time by which the charge process can be postponed
 

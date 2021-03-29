@@ -38,14 +38,13 @@ if __name__ == "__main__":
 
     # SPV / NBSS
     spv_list = list(range(10, 110, 10))
-    # spv_list.append(100)
     nbss_list = list(range(5, 35, 5))
     stats_by_nbss = AvgStatistics( len(nbss_list), len(spv_list))
     stats_by_spv = AvgStatistics(r=len(spv_list))
 
     # F / TMAX
     f_list = range(1, 14)
-    tmax_list = range(10, 70, 10)
+    tmax_list = list(range(10, 60, 10)) #+ list(range(60, 360, 60))
     stats_by_tmaxf = AvgStatistics(len(tmax_list), len(f_list))
     stats_by_f = AvgStatistics(r=len(f_list))
     stats_by_Tmax = AvgStatistics(r=len(tmax_list))
@@ -69,14 +68,14 @@ if __name__ == "__main__":
     #
     # multi_plot(stats_by_nbss, spv_list, nbss_list, "SPV", "NBSS")
 
-    for spv in spv_list:
-        conf.SPV = spv
-        stats = simulate()
-        print("-")
-
-        stats_by_spv.compute_avg(stats, spv_list.index(conf.SPV))
-
-    plot_stats(stats_by_spv, "SPV", spv_list)
+    # for spv in spv_list:
+    #     conf.SPV = spv
+    #     stats = simulate()
+    #     print("-")
+    #
+    #     stats_by_spv.compute_avg(stats, spv_list.index(conf.SPV))
+    #
+    # plot_stats(stats_by_spv, "SPV", spv_list)
 
     # for bth in bth_list:
     #     conf.BTH = bth
@@ -87,16 +86,16 @@ if __name__ == "__main__":
     #
     # plot_stats(stats_by_bth, bth_list, "Bth")
 
-    # for tmax in tmax_list:
-    #     for f in f_list:
-    #         conf.TMAX = tmax
-    #         conf.F = f
-    #         stats = simulate()
-    #         print("-")
-    #
-    #         stats_by_tmaxf.compute_avg(stats, tmax_list.index(conf.TMAX), f_list.index(conf.F))
-    #
-    # multi_plot(stats_by_tmaxf, f_list, tmax_list, "F", "TMAX")
+    for tmax in tmax_list:
+        for f in f_list:
+            conf.TMAX = tmax
+            conf.F = f
+            stats = simulate()
+            print("-")
+
+            stats_by_tmaxf.compute_avg(stats, tmax_list.index(conf.TMAX), f_list.index(conf.F))
+
+    multi_plot(stats_by_tmaxf, f_list, tmax_list, "F", "TMAX")
 
     # for f in f_list:
     #     conf.F = f
@@ -114,7 +113,7 @@ if __name__ == "__main__":
     #
     #     stats_by_Tmax.compute_avg(stats, tmax_list.index(conf.TMAX))
     #
-    # plot_stats(stats_by_Tmax, tmax_list, "TMAX")
+    # plot_stats(stats_by_Tmax, "TMAX", tmax_list)
 
     # for i in range(len(arrival_list)):
     #     conf.arrival_rate = arrival_list[i]

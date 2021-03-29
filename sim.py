@@ -59,8 +59,7 @@ def arrival(time, ev, QoE, bss, stats):
                 stats.loss[conf.DAY] += 1
 
     if not conf.check_high_demand() and conf.F > 0:
-        r_c = bss.postpone_charge(time, dm, conf.MONTH, conf.CURRENT_DAY, conf.HOUR)
-        bss.resume_charge_flag = r_c
+        bss.postpone_charge(time, dm, conf.MONTH, conf.CURRENT_DAY, conf.HOUR)
 
 
 ## Serve waiting EV ##
@@ -90,11 +89,6 @@ def battery_available(time, QoE, bss, stats):
     if conf.PV_SET:
         n = sum([s.is_charging for s in sockets])
         PVpower = dm.get_PV_power(conf.MONTH, conf.CURRENT_DAY, conf.HOUR, n)
-        # Divide the energy produced by the PVs by the active sockets
-        try:  # Handle division by zero
-            PVpower /= sum([s.is_charging * s.busy for s in sockets])
-        except:
-            pass
 
     threshold = conf.C if conf.check_high_demand() else conf.BTH
     threshold *= conf.TOL
@@ -129,8 +123,7 @@ def battery_available(time, QoE, bss, stats):
     stats.last_update = time
 
     if not conf.check_high_demand() and conf.F > 0:
-        r_c = bss.postpone_charge(time, dm, conf.MONTH, conf.CURRENT_DAY, conf.HOUR)
-        bss.resume_charge_flag = r_c
+        bss.postpone_charge(time, dm, conf.MONTH, conf.CURRENT_DAY, conf.HOUR)
 
 
 ## Change Hour ##
@@ -149,7 +142,13 @@ def update_all_batteries(time, bss, stats, QoE=None):
     PVpower = 0
     if conf.PV_SET:
         n = sum([s.is_charging for s in sockets])
-        PVpower = dm.get_PV_power(conf.MONTH, conf.CURRENT_DAY, conf.HOUR, n)
+        try:
+            PVpower = dm.get_PV_power(conf.MONTH, conf.CURRENT_DAY, conf.HOUR, n)
+        except:
+            # test = dm.get_PV_power(conf.MONTH, conf.CURRENT_DAY, conf.HOUR, 1)
+            # if test > 0:
+            #     print(conf.MONTH, conf.CURRENT_DAY, conf.HOUR, test)
+            pass
 
     threshold = conf.C if conf.check_high_demand() else conf.BTH
     threshold *= conf.TOL
@@ -167,11 +166,10 @@ def update_all_batteries(time, bss, stats, QoE=None):
                 bss.ready_batteries += 1
 
     stats.last_update = time
-    if bss.resume_charge_flag:
-        bss.resume_charge(time)
 
     if QoE:
         set_time(QoE, stats)
+        bss.resume_charge(time)
     return
 
 

@@ -17,14 +17,14 @@ class Socket:
 
     def plug_battery(self, battery, time):
         self.busy = True
-        # self.is_charging = True
+        self.is_charging = True
         self.battery = battery
         self.battery.last_update = time
         self.bss.n_charging += 1
 
     def unplug_battery(self):
         self.busy = False
-        # self.is_charging = False
+        self.is_charging = False
         self.battery = None
         self.bss.n_charging -= 1
 
@@ -171,7 +171,7 @@ class BSS:
             if pv_now == 0:
                 month, day, hour = self.__check_next_hour(month, day, hour)
                 if month == 13:
-                    return False
+                    return
 
                 pv_next_hour = dm.get_PV_power(month, day, hour)
                 price_now = dm.get_prices_electricity(month, day, hour - 1)
@@ -190,9 +190,9 @@ class BSS:
                                 self.postponed_batteries += 1
                         ind += 1
 
-                    return True
+                    return
 
-        return False
+        return
 
     def resume_charge(self, time):
         for s in self.sockets:
