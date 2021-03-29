@@ -43,7 +43,9 @@ class Battery:
         CR = conf.CR
         PV_SET = conf.PV_SET
 
-        power_update = (time - self.last_update) / 60  # Hours
+        charge_0 = self.charge
+
+        power_update = (time - self.last_update) / 60  # Amount of power consumed
         if power_update < 0:
             raise Exception('Negative power update')
 
@@ -54,6 +56,9 @@ class Battery:
             if PVpower > CR:
                 power_update *= CR
                 self.charge += power_update
+
+                power_from_grid = 0
+                power_from_pv = power_update
             else:
                 CR_grid = CR - PVpower
                 # Take the power from the PV and the grid
@@ -61,15 +66,19 @@ class Battery:
                 power_update_grid = power_update * CR_grid
                 self.charge = self.charge + power_update_pv + power_update_grid
                 price_power_update = price * power_update_grid * 1e-6
-                power_update = power_update_grid
+
+                power_from_grid = power_update_grid
+                power_from_pv = power_update_pv
         else:
             power_update *= CR  # Take the power from the grid
             self.charge = self.charge + power_update
             price_power_update = price * power_update * 1e-6
 
-        # print(self.charge, '/', C)
+            power_from_grid = power_update
+            power_from_pv = 0
+
         self.last_update = time
-        return price_power_update, power_update
+        return price_power_update, power_from_grid, power_from_pv, self.charge - charge_0
 
     def time_to_ready(self, time):
         C = conf.C

@@ -10,7 +10,7 @@ def reset_parameters():
     conf.SPV = 100
     conf.BTH = 38000
     conf.TMAX = 20
-    conf.F = 0 #2 * conf.NBSS / 3
+    conf.F = conf.NBSS / 3
 
 
 def multi_plot(stats, x, legend_values, xlabel, legend_label):
@@ -22,12 +22,14 @@ def multi_plot(stats, x, legend_values, xlabel, legend_label):
 
 
 def plot_stats(stats, params, label):
-    MultiPlot(stats.avg_arrivals, title="Arrivals", xvalues=params, labels=label).single_plot()
-    MultiPlot(stats.avg_loss, title="Losses", xvalues=params, labels=label).single_plot()
-    MultiPlot(stats.avg_avg_wait, title="Waiting", xvalues=params, labels=label).single_plot()
-    MultiPlot(stats.avg_avg_ready, title="Average ready", xvalues=params, labels=label).single_plot()
-    MultiPlot(stats.avg_cost, title="Costs", xvalues=params, labels=label).single_plot()
-    MultiPlot(stats.avg_consumption, title="Consumption", xvalues=params, labels=label).single_plot()
+    MultiPlot(stats.avg_arrivals, title="Arrivals", xvalues=label, labels=label).single_plot()
+    MultiPlot(stats.avg_loss, title="Losses", xvalues=label, labels=label).single_plot()
+    MultiPlot(stats.avg_avg_wait, title="Waiting", xvalues=label, labels=label).single_plot()
+    MultiPlot(stats.avg_avg_ready, title="Average ready", xvalues=label, labels=label).single_plot()
+    MultiPlot(stats.avg_cost, title="Costs", xvalues=label, xlabel=params,
+              ylabel="Euro per day", labels=label).single_plot()
+    MultiPlot(stats.avg_consumption, title="Consumption", xlabel=params,
+              ylabel="Power per day [W/day]", xvalues=label, labels=label).single_plot()
     MultiPlot(stats.avg_cost, stats.avg_loss_prob, title="Cost / prob loss").plot_cost_prob_loss(label)
 
 
@@ -35,8 +37,8 @@ if __name__ == "__main__":
     reset_parameters()
 
     # SPV / NBSS
-    spv_list = list(range(0, 40, 5))
-    spv_list.append(100)
+    spv_list = list(range(10, 110, 10))
+    # spv_list.append(100)
     nbss_list = list(range(5, 35, 5))
     stats_by_nbss = AvgStatistics( len(nbss_list), len(spv_list))
     stats_by_spv = AvgStatistics(r=len(spv_list))
@@ -74,7 +76,7 @@ if __name__ == "__main__":
 
         stats_by_spv.compute_avg(stats, spv_list.index(conf.SPV))
 
-    plot_stats(stats_by_spv, spv_list, spv_list)
+    plot_stats(stats_by_spv, "SPV", spv_list)
 
     # for bth in bth_list:
     #     conf.BTH = bth

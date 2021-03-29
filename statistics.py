@@ -1,7 +1,8 @@
-from plot import Plot
+from plot import Plot, MultiPlot
 import config as conf
 import numpy as np
-
+from data_manager import DatasetManager
+from calendar import monthrange
 
 class Statistics:
     def __init__(self):
@@ -20,6 +21,7 @@ class Statistics:
         self.consumption = {i + 1: 0 for i in range(365)}
         self.loss_prob = {i + 1: 0 for i in range(365)}
         self.spv_production = {i + 1: 0 for i in range(365)}
+        self.total_consumption = {i + 1: 0 for i in range(365)}
 
     def compute_daily_stats(self, day):
         self.avg_wait[day] = self.avg_wait[day] / self.arrivals[day]
@@ -39,6 +41,9 @@ class Statistics:
         # Plot(self.busy_sockets.values(), title="Busy sockets").plot_by_day()
         Plot(self.consumption.values(), self.spv_production.values(), title="Energy consumption").plot_by_day()
 
+        y = np.array([list(self.total_consumption.values()), list(self.consumption.values()), list(self.spv_production.values())])
+        MultiPlot(y, xvalues=range(365), title="Consumption", ylabel="Power [W]").plot(["Tot", "Grid", "SPV"])
+
         if conf.PV_SET:
             Plot(self.cost.values(), title="Daily cost with PV").plot_by_day()
         else:
@@ -46,6 +51,17 @@ class Statistics:
 
         prob_losses = [i / j for i, j in zip(self.loss.values(), self.arrivals.values())]
         Plot(self.cost.values(), prob_losses, title="Cost / prob losses").scatter()
+
+        dm = DatasetManager()
+        pv_daily = {i+1 : 0 for i in range(365)}
+        ind = 0
+        for m in range(1, 13):
+            for d in range(1, monthrange(2019, m)[1] + 1):
+                ind += 1
+                for h in range(24):
+                    pv_daily[ind] += dm.get_PV_power(m, d, h, 1)
+        y = np.array([list(self.spv_production.values()), list(pv_daily.values())])
+        MultiPlot(y, xvalues=range(365), title="PV analysis", ylabel="Power [W]").plot(["Cons", "Prod"])
 
 
 class AvgStatistics:

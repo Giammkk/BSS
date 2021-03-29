@@ -3,7 +3,7 @@ import numpy as np
 
 
 class Plot:
-    def __init__(self, yvalues, xvalues=[], title="", labels=[],
+    def __init__(self, yvalues, xvalues=[], title="", labels="",
                  xlabel="", ylabel="", save=0):
         self.yvalues = yvalues
         self.xvalues = xvalues
@@ -95,12 +95,13 @@ class MultiPlot(Plot):
         plt.grid()
         plt.title(self.title)
         plt.xlabel(self.xlabel)
+        plt.ylabel(self.ylabel)
 
         plt.ylim((np.min(self.yvalues) - 1, np.max(self.yvalues) + 2))
 
 
         for i in range(self.yvalues.shape[0]):
-            plt.plot(self.xvalues, self.yvalues[i, :], ".-",label=self.labels + " " + str(legend_labels[i]))
+            plt.plot(self.xvalues, self.yvalues[i, :], ".-", label=self.labels + " " + str(legend_labels[i]))
 
         plt.legend()
         plt.show()
@@ -110,6 +111,7 @@ class MultiPlot(Plot):
         plt.grid()
         plt.title(self.title)
         plt.xlabel(self.xlabel)
+        plt.ylabel(self.ylabel)
 
         ax = fig.add_subplot()
 

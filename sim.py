@@ -102,10 +102,11 @@ def battery_available(time, QoE, bss, stats):
     for socket in sockets:
         if socket.busy:
             if socket.is_charging:
-                cost, power = socket.battery.update_charge(time, PVpower, price)
+                cost, power, p_pv, tot_power = socket.battery.update_charge(time, PVpower, price)
                 stats.cost[conf.DAY] += cost
                 stats.consumption[conf.DAY] += power
-                stats.spv_production[conf.DAY] += PVpower
+                stats.spv_production[conf.DAY] += p_pv
+                stats.total_consumption[conf.DAY] += tot_power
 
             if socket.battery.charge > threshold:
                 socket.unplug_battery()
@@ -155,10 +156,11 @@ def update_all_batteries(time, bss, stats, QoE=None):
 
     for socket in sockets:
         if socket.busy and socket.is_charging:
-            cost, power = socket.battery.update_charge(time, PVpower, price)
+            cost, power, p_pv, tot_power = socket.battery.update_charge(time, PVpower, price)
             stats.cost[conf.DAY] += cost
             stats.consumption[conf.DAY] += power
-            stats.spv_production[conf.DAY] += PVpower
+            stats.spv_production[conf.DAY] += p_pv
+            stats.total_consumption[conf.DAY] += tot_power
 
             if socket.battery.charge >= threshold:
                 socket.unplug_battery()
