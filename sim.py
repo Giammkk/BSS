@@ -1,5 +1,4 @@
 import random
-import sys
 import warnings
 from calendar import monthrange
 from queue import PriorityQueue
@@ -7,9 +6,11 @@ from queue import PriorityQueue
 import numpy as np
 
 import config as conf
-from components import Socket, Battery, EV, BSS
+from socket import Socket
+from battery import Battery
+from ev import EV
+from bss import BSS
 from data_manager import DatasetManager
-from plot import Plot
 from statistics import Statistics
 
 dm = DatasetManager()
@@ -17,7 +18,7 @@ pv_production = dm.get_pv_data()
 
 
 def next_arrival():
-    return random.expovariate(1 / conf.arrival_rate[conf.HOUR])
+    return random.expovariate(0.7 / conf.arrival_rate[conf.HOUR])
 
 
 def arrival(time, ev, QoE, bss, stats):
@@ -30,10 +31,9 @@ def arrival(time, ev, QoE, bss, stats):
         stats.avg_ready[conf.DAY] += bss.ready_batteries
 
         # Schedule the next arrival
-        QoE.put((time + next_arrival(), "3_arrival", EV(random.gauss(8000, 1000), 0)))
+        QoE.put((time + next_arrival(), "3_arrival", EV(random.gauss(conf.C * 0.2, 1000), 0)))
 
         queue = bss.queue
-        # update_all_batteries(time, bss, stats, 0) # DELETE
 
         if bss.ready_batteries > 0:
             bss.ready_batteries -= 1
@@ -204,7 +204,7 @@ def simulate():
 
     QoE = PriorityQueue()
     # Schedule the first arrival at t=0
-    QoE.put((0, "3_arrival", EV(random.gauss(8000, 1000), 0)))
+    QoE.put((0, "3_arrival", EV(random.gauss(conf.C * 0.2, 1000), 0)))
     QoE.put((60, "1_change_hour", None))
 
     bss = BSS()
@@ -212,7 +212,7 @@ def simulate():
     for i in range(conf.NBSS):
         s = Socket()
         s.bss = bss
-        s.plug_battery(Battery(charge=random.gauss(8000, 1000)), time)
+        s.plug_battery(Battery(charge=random.gauss(conf.C * 0.2, 1000)), time)
         sockets.append(s)
     bss.sockets = sockets
     bss.n_charging = len(sockets)
@@ -262,8 +262,9 @@ def simulate():
     print("Mean arrivals: %f" % (np.mean(list(stats.arrivals.values()))))
     print("Mean loss: %f" % (np.mean(list(stats.loss.values()))))
     print("Mean cost: %f" % (np.mean(list(stats.cost.values()))))
-    print("Mean consumption: %f" % (np.mean(list(stats.consumption.values()))))
-    print("Max SPV: %f" % max(list(stats.spv_production.values())))
+    print("Mean consumption: %f" % (np.mean(list(stats.total_consumption.values()))))
+    print("Mean grid consumption: %f" % (np.mean(list(stats.consumption.values()))))
+    print("Mean SPV: %f" % np.mean(list(stats.spv_production.values())))
 
     return stats
 

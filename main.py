@@ -6,11 +6,11 @@ import numpy as np
 
 
 def reset_parameters():
-    conf.NBSS = 15
+    conf.NBSS = 5
     conf.SPV = 100
-    conf.BTH = 38000
+    conf.BTH = conf.C * 0.9
     conf.TMAX = 20
-    conf.F = conf.NBSS / 3
+    conf.F = 0
 
 
 def multi_plot(stats, x, legend_values, xlabel, legend_label):
@@ -37,9 +37,9 @@ if __name__ == "__main__":
     reset_parameters()
 
     # SPV / NBSS
-    spv_list = list(range(10, 110, 10))
-    nbss_list = list(range(5, 35, 5))
-    stats_by_nbss = AvgStatistics( len(nbss_list), len(spv_list))
+    spv_list = list(range(10, 55, 5))
+    nbss_list = list(range(5, 11, 1))
+    stats_by_nbss = AvgStatistics(len(nbss_list), len(spv_list))
     stats_by_spv = AvgStatistics(r=len(spv_list))
 
     # F / TMAX
@@ -57,16 +57,16 @@ if __name__ == "__main__":
     arrival_list = [conf.arrival_rate, conf.arrival_rate_2, conf.arrival_rate_3]
     stats_by_arr_rate = AvgStatistics(r=len(arrival_list))
 
-    # for spv in spv_list:
-    #     for nbss in nbss_list:
-    #         conf.SPV = spv
-    #         conf.NBSS = nbss
-    #         stats = simulate()
-    #         print("-")
-    #
-    #         stats_by_nbss.compute_avg(stats, nbss_list.index(conf.NBSS), spv_list.index(conf.SPV))
-    #
-    # multi_plot(stats_by_nbss, spv_list, nbss_list, "SPV", "NBSS")
+    for spv in spv_list:
+        for nbss in nbss_list:
+            conf.SPV = spv
+            conf.NBSS = nbss
+            stats = simulate()
+            print("-")
+
+            stats_by_nbss.compute_avg(stats, nbss_list.index(conf.NBSS), spv_list.index(conf.SPV))
+
+    multi_plot(stats_by_nbss, spv_list, nbss_list, "SPV", "NBSS")
 
     # for spv in spv_list:
     #     conf.SPV = spv
@@ -86,16 +86,16 @@ if __name__ == "__main__":
     #
     # plot_stats(stats_by_bth, bth_list, "Bth")
 
-    for tmax in tmax_list:
-        for f in f_list:
-            conf.TMAX = tmax
-            conf.F = f
-            stats = simulate()
-            print("-")
-
-            stats_by_tmaxf.compute_avg(stats, tmax_list.index(conf.TMAX), f_list.index(conf.F))
-
-    multi_plot(stats_by_tmaxf, f_list, tmax_list, "F", "TMAX")
+    # for tmax in tmax_list:
+    #     for f in f_list:
+    #         conf.TMAX = tmax
+    #         conf.F = f
+    #         stats = simulate()
+    #         print("-")
+    #
+    #         stats_by_tmaxf.compute_avg(stats, tmax_list.index(conf.TMAX), f_list.index(conf.F))
+    #
+    # multi_plot(stats_by_tmaxf, f_list, tmax_list, "F", "TMAX")
 
     # for f in f_list:
     #     conf.F = f
