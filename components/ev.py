@@ -1,4 +1,4 @@
-from battery import Battery
+from components.battery import Battery
 
 
 class EV:

@@ -6,10 +6,10 @@ from queue import PriorityQueue
 import numpy as np
 
 import config as conf
-from socket import Socket
-from battery import Battery
-from ev import EV
-from bss import BSS
+from components.socket import Socket
+from components.battery import Battery
+from components.ev import EV
+from components.bss import BSS
 from data_manager import DatasetManager
 from statistics import Statistics
 
