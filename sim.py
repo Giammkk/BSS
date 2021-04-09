@@ -10,12 +10,13 @@ from components.socket import Socket
 from components.battery import Battery
 from components.ev import EV
 from components.bss import BSS
+from components.pv_surplus_handler import PV_surplus_handler
 from data_manager import DatasetManager
 from statistics import Statistics
 
 dm = DatasetManager()
 pv_production = dm.get_pv_data()
-
+pv_surplus = PV_surplus_handler()
 
 def next_arrival():
     return random.expovariate(0.7 / conf.arrival_rate[conf.HOUR])
@@ -94,13 +95,16 @@ def battery_available(time, QoE, bss, stats):
     threshold *= conf.TOL
 
     for socket in sockets:
+        p_pv = 0
         if socket.busy:
+            pv_available = PVpower * (time - socket.battery.last_update) / 60
             if socket.is_charging:
                 cost, power, p_pv, tot_power = socket.battery.update_charge(time, PVpower, price)
+
                 stats.cost[conf.DAY] += cost
-                stats.consumption[conf.DAY] += power
-                stats.spv_production[conf.DAY] += p_pv
-                stats.total_consumption[conf.DAY] += tot_power
+                stats.consumption[conf.DAY] += power  # grid
+                stats.spv_production[conf.DAY] += p_pv  # pv
+                stats.total_consumption[conf.DAY] += tot_power  # total
 
             if socket.battery.charge > threshold:
                 socket.unplug_battery()
@@ -108,10 +112,13 @@ def battery_available(time, QoE, bss, stats):
 
                 if not queue.empty():
                     ev = queue.get()
-                    # print(ev)
                     socket.plug_battery(ev.battery, time)
                     bss.ready_batteries -= 1
                     ev.status = "served"
+
+            if PVpower > conf.CR:
+                # Sell surplus of pv energy for half of the price
+                stats.saving[conf.DAY] += pv_surplus.sell_energy(pv_available - p_pv, price, time)
 
     for socket in sockets:
         if socket.busy:
@@ -142,28 +149,36 @@ def update_all_batteries(time, bss, stats, QoE=None):
     PVpower = 0
     if conf.PV_SET:
         n = sum([s.is_charging for s in sockets])
-        try:
+        if n > 0:
             PVpower = dm.get_PV_power(conf.MONTH, conf.CURRENT_DAY, conf.HOUR, n)
-        except:
-            # test = dm.get_PV_power(conf.MONTH, conf.CURRENT_DAY, conf.HOUR, 1)
-            # if test > 0:
-            #     print(conf.MONTH, conf.CURRENT_DAY, conf.HOUR, test)
-            pass
+        else:
+            PVpower = dm.get_PV_power(conf.MONTH, conf.CURRENT_DAY, conf.HOUR, 1)
+            time_0 = pv_surplus.last_update
+            PVpower = PVpower * (time - time_0) / 60
+            stats.saving[conf.DAY] += pv_surplus.sell_energy(PVpower, price, time)
 
     threshold = conf.C if conf.check_high_demand() else conf.BTH
     threshold *= conf.TOL
 
     for socket in sockets:
-        if socket.busy and socket.is_charging:
-            cost, power, p_pv, tot_power = socket.battery.update_charge(time, PVpower, price)
-            stats.cost[conf.DAY] += cost
-            stats.consumption[conf.DAY] += power
-            stats.spv_production[conf.DAY] += p_pv
-            stats.total_consumption[conf.DAY] += tot_power
+        p_pv = 0
+        if socket.busy:
+            pv_available = PVpower * (time - socket.battery.last_update) / 60
+            if socket.is_charging:
+                cost, power, p_pv, tot_power = socket.battery.update_charge(time, PVpower, price)
 
-            if socket.battery.charge >= threshold:
-                socket.unplug_battery()
-                bss.ready_batteries += 1
+                stats.cost[conf.DAY] += cost
+                stats.consumption[conf.DAY] += power
+                stats.spv_production[conf.DAY] += p_pv
+                stats.total_consumption[conf.DAY] += tot_power
+
+                if socket.battery.charge >= threshold:
+                    socket.unplug_battery()
+                    bss.ready_batteries += 1
+
+            if PVpower > conf.CR:
+                # Sell surplus of pv energy for half of the price
+                stats.saving[conf.DAY] += pv_surplus.sell_energy(pv_available - p_pv, price, time)
 
     stats.last_update = time
 
@@ -265,6 +280,7 @@ def simulate():
     print("Mean consumption: %f" % (np.mean(list(stats.total_consumption.values()))))
     print("Mean grid consumption: %f" % (np.mean(list(stats.consumption.values()))))
     print("Mean SPV: %f" % np.mean(list(stats.spv_production.values())))
+    print("Mean saving: %f" % np.mean(list(stats.saving.values())))
 
     return stats
 

@@ -7,11 +7,11 @@ C = 20000  # Battery capacity
 TOL = 1  # Percentage of charge to be full
 NBSS = 5  # Max number of chargers
 B = 2 * NBSS  # Max number of batteries (charging + queue)
-WMAX = 10  # Max waiting time for EV
-BTH = C * 0.9  # Minimum charge level
+WMAX = 15  # Max waiting time for EV
+BTH = C * 0.8  # Minimum charge level
 CR = int(C / 2)  # Charging rate per hour
 PV_SET = 1  # Indicator of presence of a PV in the BSS
-SPV = 50  # Nominal capacity of one PV (kW) * number of panels
+SPV = 10  # Nominal capacity of one PV (kW) * number of panels
 F = NBSS  # Fraction of batteries whose charge can be postponed
 TMAX = 20  # Maximum time by which the charge process can be postponed
 

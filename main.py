@@ -7,7 +7,7 @@ import numpy as np
 
 def reset_parameters():
     conf.NBSS = 5
-    conf.SPV = 100
+    conf.SPV = 50
     conf.BTH = conf.C * 0.9
     conf.TMAX = 20
     conf.F = 0
@@ -50,23 +50,23 @@ if __name__ == "__main__":
     stats_by_Tmax = AvgStatistics(r=len(tmax_list))
 
     # BTH
-    bth_list = range(int(conf.C / 2), conf.C, 1000)
+    bth_list = [bth / 100 for bth in range(60, 95, 5)]
     stats_by_bth = AvgStatistics(r=len(bth_list))
 
     # ARRIVAL_COEFF
     arrival_list = [conf.arrival_rate, conf.arrival_rate_2, conf.arrival_rate_3]
     stats_by_arr_rate = AvgStatistics(r=len(arrival_list))
 
-    for spv in spv_list:
-        for nbss in nbss_list:
-            conf.SPV = spv
-            conf.NBSS = nbss
-            stats = simulate()
-            print("-")
-
-            stats_by_nbss.compute_avg(stats, nbss_list.index(conf.NBSS), spv_list.index(conf.SPV))
-
-    multi_plot(stats_by_nbss, spv_list, nbss_list, "SPV", "NBSS")
+    # for spv in spv_list:
+    #     for nbss in nbss_list:
+    #         conf.SPV = spv
+    #         conf.NBSS = nbss
+    #         stats = simulate()
+    #         print("-")
+    #
+    #         stats_by_nbss.compute_avg(stats, nbss_list.index(conf.NBSS), spv_list.index(conf.SPV))
+    #
+    # multi_plot(stats_by_nbss, spv_list, nbss_list, "SPV", "NBSS")
 
     # for spv in spv_list:
     #     conf.SPV = spv
@@ -77,14 +77,14 @@ if __name__ == "__main__":
     #
     # plot_stats(stats_by_spv, "SPV", spv_list)
 
-    # for bth in bth_list:
-    #     conf.BTH = bth
-    #     stats = simulate()
-    #     print("-")
-    #
-    #     stats_by_bth.compute_avg(stats, bth_list.index(conf.BTH))
-    #
-    # plot_stats(stats_by_bth, bth_list, "Bth")
+    for bth in bth_list:
+        conf.BTH = conf.C * bth
+        stats = simulate()
+        print("-")
+
+        stats_by_bth.compute_avg(stats, bth_list.index(bth))
+
+    plot_stats(stats_by_bth, "Bth", bth_list)
 
     # for tmax in tmax_list:
     #     for f in f_list:

@@ -24,35 +24,39 @@ class Statistics:
         self.spv_production = {i + 1: 0 for i in range(365)}
         self.total_consumption = {i + 1: 0 for i in range(365)}
 
+        self.saving = {i + 1: 0 for i in range(365)}
+        self.net_cost = {i + 1: 0 for i in range(365)}
+
     def compute_daily_stats(self, day):
         self.avg_wait[day] = self.avg_wait[day] / self.arrivals[day]
         self.avg_ready[day] = self.avg_ready[day] / self.arrivals[day]
         self.len_queue[day] = self.len_queue[day] / (60 * 24)
         self.busy_sockets[day] = self.busy_sockets[day] / (60 * 24)
         self.loss_prob[day] = self.loss[day] / self.arrivals[day]
+        self.net_cost[day] = self.cost[day] - self.saving[day]
 
     def plot_stats(self):
         Plot([i / 365 for i in self.daily_arr.values()], title="Arrivals by hour").plot_by_hour()
 
         Plot(self.arrivals.values(), title="Daily arrivals").plot_by_day()
         Plot(self.loss.values(), title="Daily losses").plot_by_day()
-        # Plot(self.avg_wait.values(), title="Daily waiting").plot_by_day()
+        Plot(self.avg_wait.values(), title="Daily waiting").plot_by_day()
         # Plot(self.avg_ready.values(), title="Avg ready batteries").plot_by_day()
         # Plot(self.len_queue.values(), title="Avg queue length").plot_by_day()
         # Plot(self.busy_sockets.values(), title="Busy sockets").plot_by_day()
-        Plot(self.consumption.values(), self.spv_production.values(), title="Energy consumption").plot_by_day()
+        # Plot(self.consumption.values(), self.spv_production.values(), title="Energy consumption").plot_by_day()
 
         y = np.array([list(self.total_consumption.values()), list(self.consumption.values()),
                       list(self.spv_production.values())])
-        MultiPlot(y, xvalues=range(365), title="Consumption", ylabel="Power [W]").plot(["Tot", "Grid", "SPV"])
+        MultiPlot(y, xvalues=range(365), title="Consumption", ylabel="Energy [Wh]").plot(["Tot", "Grid", "SPV"])
 
-        if conf.PV_SET:
-            Plot(self.cost.values(), title="Daily cost with PV").plot_by_day()
-        else:
-            Plot(self.cost.values(), title="Daily cost without PV").plot_by_day()
+        # if conf.PV_SET:
+        #     Plot(self.cost.values(), title="Daily cost with PV").plot_by_day()
+        # else:
+        #     Plot(self.cost.values(), title="Daily cost without PV").plot_by_day()
 
-        prob_losses = [i / j for i, j in zip(self.loss.values(), self.arrivals.values())]
-        Plot(self.cost.values(), prob_losses, title="Cost / prob losses").scatter()
+        # prob_losses = [i / j for i, j in zip(self.loss.values(), self.arrivals.values())]
+        # Plot(self.cost.values(), prob_losses, title="Cost / prob losses").scatter()
 
         dm = DatasetManager()
         pv_daily = {i + 1: 0 for i in range(365)}
@@ -67,6 +71,9 @@ class Statistics:
         #     print(y[0, i]-y[1, i])
         MultiPlot(y, xvalues=range(365), title="PV analysis", ylabel="Power [W]").plot(["Cons", "Prod"])
 
+        y = np.array([list(self.cost.values()), list(self.net_cost.values()),
+                      list(self.saving.values())])
+        MultiPlot(y, xvalues=range(365), title="Costs", ylabel="Euro").plot(["Tot", "Net", "Saving"])
 
 class AvgStatistics:
     def __init__(self, r=1, c=1):
