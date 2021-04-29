@@ -18,6 +18,7 @@ dm = DatasetManager()
 pv_production = dm.get_pv_data()
 pv_surplus = PV_surplus_handler()
 
+
 def next_arrival():
     return random.expovariate(0.7 / conf.arrival_rate[conf.HOUR])
 
@@ -116,7 +117,7 @@ def battery_available(time, QoE, bss, stats):
                     bss.ready_batteries -= 1
                     ev.status = "served"
 
-            if PVpower > conf.CR:
+            if socket.is_charging and PVpower > conf.CR:
                 # Sell surplus of pv energy for half of the price
                 stats.saving[conf.DAY] += pv_surplus.sell_energy(pv_available - p_pv, price, time)
 
@@ -176,7 +177,7 @@ def update_all_batteries(time, bss, stats, QoE=None):
                     socket.unplug_battery()
                     bss.ready_batteries += 1
 
-            if PVpower > conf.CR:
+            if socket.is_charging and PVpower > conf.CR:
                 # Sell surplus of pv energy for half of the price
                 stats.saving[conf.DAY] += pv_surplus.sell_energy(pv_available - p_pv, price, time)
 
@@ -213,9 +214,10 @@ def reset_time():
 
 def simulate():
     warnings.filterwarnings("ignore")
-    random.seed(1)
-    time = 0
+    random.seed(2)
+
     reset_time()
+    time = 0
 
     QoE = PriorityQueue()
     # Schedule the first arrival at t=0
@@ -233,7 +235,7 @@ def simulate():
     bss.n_charging = len(sockets)
     bss.n_sockets = len(sockets)
 
-    random.seed(1)
+    random.seed(2)
 
     stats = Statistics()
 

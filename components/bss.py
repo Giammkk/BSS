@@ -47,6 +47,9 @@ class BSS:
         return next_ready, battery_booked, socket_booked
 
     def postpone_charge(self, time, dm, month, day, hour):
+        month_now = month
+        day_now = day
+        hour_now = hour
         h = int((time + conf.TMAX - (conf.DAY - 1) * 24 * 60) / 60)
         if h >= hour + 1:
 
@@ -57,7 +60,7 @@ class BSS:
                     return
 
                 pv_next_hour = dm.get_PV_power(month, day, hour)
-                price_now = dm.get_prices_electricity(month, day, hour - 1)
+                price_now = dm.get_prices_electricity(month_now, day_now, hour_now)
                 price_next_hour = dm.get_prices_electricity(month, day, hour)
 
                 # busy_sockets = sum([s.busy for s in self.sockets])
@@ -68,7 +71,7 @@ class BSS:
                         if self.sockets[ind].busy:
                             if not self.sockets[ind].battery.booked:
                                 self.sockets[ind].is_charging = False
-                                # self.cnt += 1
+                                self.sockets[ind].postpone_timer = int(conf.TMAX / 60)
                                 self.n_charging -= 1
                                 self.postponed_batteries += 1
                         ind += 1

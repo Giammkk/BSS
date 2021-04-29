@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import config as conf
 
 
 class Plot:
@@ -30,36 +31,32 @@ class Plot:
         plt.grid()
         plt.title(self.title)
 
-        plt.xlim((0, 365))
-        # plt.ylim((min(self.yvalues), max(self.yvalues) + 2))
+        # plt.axvline(80, linestyle='--', c='r')
+        # plt.axvline(172, linestyle='--', c='r')
+        # plt.axvline(265, linestyle='--', c='r')
+        # plt.axvline(356, linestyle='--', c='r')
+        #
+        # ax = fig.add_subplot()
+        #
+        # major_ticks = np.arange(0, 365, 30)
+        # minor_ticks = np.arange(0, 365, 5)
+        #
+        # ax.set_xticks(major_ticks)
+        # ax.set_xticks(minor_ticks, minor=True)
+        #
+        # ax.grid(which='both')
+        #
+        # ax.grid(which='minor', alpha=0.2)
+        # ax.grid(which='major', alpha=0.5)
 
-        plt.axvline(80, linestyle='--', c='r')
-        plt.axvline(172, linestyle='--', c='r')
-        plt.axvline(265, linestyle='--', c='r')
-        plt.axvline(356, linestyle='--', c='r')
-
-        ax = fig.add_subplot()
-
-        major_ticks = np.arange(0, 365, 30)
-        minor_ticks = np.arange(0, 365, 5)
-
-        ax.set_xticks(major_ticks)
-        ax.set_xticks(minor_ticks, minor=True)
-
-        ax.grid(which='both')
-
-        ax.grid(which='minor', alpha=0.2)
-        ax.grid(which='major', alpha=0.5)
-
-        plt.plot(range(365), self.yvalues)
+        plt.plot(range(conf.SIM_LAST), self.yvalues)
         if len(self.xvalues):
-            plt.plot(range(365), self.xvalues)
+            plt.plot(range(conf.SIM_LAST), self.xvalues)
 
         if self.save:
             plt.savefig(f"plots/{self.title}.png")
 
         plt.show()
-
 
     def plot_by_hour(self):
         fig = plt.figure()
@@ -97,8 +94,7 @@ class MultiPlot(Plot):
         plt.xlabel(self.xlabel)
         plt.ylabel(self.ylabel)
 
-        plt.ylim((np.min(self.yvalues) - 1, np.max(self.yvalues) + 2))
-
+        # plt.ylim((np.min(self.yvalues) - 1, np.max(self.yvalues) + 2))
 
         for i in range(self.yvalues.shape[0]):
             plt.plot(self.xvalues, self.yvalues[i, :], ".-", label=self.labels + " " + str(legend_labels[i]))
