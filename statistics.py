@@ -66,7 +66,7 @@ class Statistics:
                 ind += 1
                 for h in range(24):
                     pv_daily[ind] += dm.get_PV_power(m, d, h, 1)
-        pv_daily = list(pv_daily.values())
+        pv_daily = list(pv_daily.values())[152:213]
         y = np.array([list(self.spv_production.values()), pv_daily])
         # for i in range(y.shape[1]):
         #     print(y[0, i]-y[1, i])
@@ -89,25 +89,15 @@ class AvgStatistics:
         self.avg_tot_consumption = np.zeros((r, c))
         self.avg_spv_consumption = np.zeros((r, c))
         self.avg_saving = np.zeros((r, c))
+        self.cost_per_service = np.zeros((r, c))
 
     def compute_avg(self, stats, r=1, c=0):
-        if c > 0:
-            self.avg_arrivals[r][c] = np.mean(list(stats.arrivals.values()))
-            self.avg_loss[r][c] = np.mean(list(stats.loss.values()))
-            self.avg_avg_wait[r][c] = np.mean(list(stats.avg_wait.values()))
-            self.avg_avg_ready[r][c] = np.mean(list(stats.avg_ready.values()))
-            self.avg_cost[r][c] = np.mean(list(stats.cost.values()))
-            self.avg_loss_prob[r][c] = np.mean(list(stats.loss_prob.values()))
-            self.avg_consumption[r][c] = np.mean(list(stats.consumption.values()))
-            self.avg_saving[r][c] = np.mean(list(stats.saving.values()))
-
-        elif c == 0:
-            self.avg_arrivals[r] = np.mean(list(stats.arrivals.values()))
-            self.avg_loss[r] = np.mean(list(stats.loss.values()))
-            self.avg_avg_wait[r] = np.mean(list(stats.avg_wait.values()))
-            self.avg_avg_ready[r] = np.mean(list(stats.avg_ready.values()))
-            self.avg_cost[r] = np.mean(list(stats.cost.values()))
-            self.avg_loss_prob[r] = np.mean(list(stats.loss_prob.values()))
-            self.avg_consumption[r] = np.mean(list(stats.consumption.values()))
-            self.avg_tot_consumption[r] = np.mean(list(stats.total_consumption.values()))
-            self.avg_spv_consumption[r] = np.mean(list(stats.spv_production.values()))
+        self.avg_arrivals[r][c] = np.mean(list(stats.arrivals.values()))
+        self.avg_loss[r][c] = np.mean(list(stats.loss.values()))
+        self.avg_avg_wait[r][c] = np.mean(list(stats.avg_wait.values()))
+        self.avg_avg_ready[r][c] = np.mean(list(stats.avg_ready.values()))
+        self.avg_cost[r][c] = np.mean(list(stats.cost.values()))
+        self.avg_loss_prob[r][c] = np.mean(list(stats.loss_prob.values()))
+        self.avg_consumption[r][c] = np.mean(list(stats.consumption.values()))
+        self.avg_saving[r][c] = np.mean(list(stats.saving.values()))
+        self.cost_per_service[r][c] = self.avg_cost[r][c] / (self.avg_arrivals[r][c] - self.avg_loss[r][c])

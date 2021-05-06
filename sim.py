@@ -209,7 +209,8 @@ def reset_time():
     conf.DAY = 1
     conf.HOUR = 0
     conf.CURRENT_DAY = 1
-    conf.MONTH = 1
+    conf.MONTH = 6
+    pv_surplus.last_update = 0
 
 
 def simulate():

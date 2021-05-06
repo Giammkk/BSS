@@ -23,6 +23,8 @@ def multi_plot(stats, x, legend_values, xlabel, legend_label):
         legend_values)
     MultiPlot(stats.avg_saving, xvalues=x, title="Savings", ylabel="Euro per day", labels=legend_label,
               xlabel=xlabel).plot(legend_values)
+    MultiPlot(stats.cost_per_service, xvalues=x, title="Cost per service", ylabel="Euro per service",
+              labels=legend_label, xlabel=xlabel).plot(legend_values)
 
 
 def plot_stats(stats, params, label):
@@ -51,7 +53,7 @@ if __name__ == "__main__":
     stats_by_spv = AvgStatistics(r=len(spv_list))
 
     # F / TMAX
-    f_list = range(1, conf.NBSS + 1)
+    f_list = list(range(1, conf.NBSS + 1))
     tmax_list = list(range(10, 60, 10)) + list(range(60, 360, 60))
     stats_by_tmaxf = AvgStatistics(len(tmax_list), len(f_list))
     stats_by_f = AvgStatistics(r=len(f_list))
