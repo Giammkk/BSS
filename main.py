@@ -6,19 +6,19 @@ import numpy as np
 
 
 def reset_parameters():
-    conf.NBSS = 15
-    conf.SPV = 100
-    conf.BTH = conf.C * 0.8
-    conf.TMAX = 20
-    conf.F = 10
+    conf.NBSS = 20
+    conf.SPV = 500
+    conf.BTH = conf.C * 0.9
+    conf.TMAX = 5
+    conf.F = 0
 
 
 def multi_plot(stats, x, legend_values, xlabel, legend_label):
     MultiPlot(stats.avg_arrivals, xvalues=x, title="Arrivals", labels=legend_label, xlabel=xlabel).plot(legend_values)
     MultiPlot(stats.avg_loss, xvalues=x, title="Losses", labels=legend_label, xlabel=xlabel).plot(legend_values)
-    MultiPlot(stats.avg_avg_wait, xvalues=x, title="Avg wait", labels=legend_label, xlabel=xlabel).plot(legend_values)
-    MultiPlot(stats.avg_avg_ready, xvalues=x, title="Avg ready batteries", labels=legend_label, xlabel=xlabel).plot(
-        legend_values)
+    # MultiPlot(stats.avg_avg_wait, xvalues=x, title="Avg wait", labels=legend_label, xlabel=xlabel).plot(legend_values)
+    # MultiPlot(stats.avg_avg_ready, xvalues=x, title="Avg ready batteries", labels=legend_label, xlabel=xlabel).plot(
+    #     legend_values)
     MultiPlot(stats.avg_cost, xvalues=x, title="Costs", ylabel="Euro per day", labels=legend_label, xlabel=xlabel).plot(
         legend_values)
     MultiPlot(stats.avg_saving, xvalues=x, title="Savings", ylabel="Euro per day", labels=legend_label,
@@ -30,10 +30,15 @@ def multi_plot(stats, x, legend_values, xlabel, legend_label):
 def plot_stats(stats, params, label):
     MultiPlot(stats.avg_arrivals, title="Arrivals", xvalues=label, labels=label).single_plot()
     MultiPlot(stats.avg_loss, title="Losses", xvalues=label, xlabel=params, labels=label).single_plot()
-    MultiPlot(stats.avg_avg_wait, title="Waiting", xvalues=label, labels=label).single_plot()
-    MultiPlot(stats.avg_avg_ready, title="Average ready", xvalues=label, labels=label).single_plot()
+    # MultiPlot(stats.avg_avg_wait, title="Waiting", xvalues=label, labels=label).single_plot()
+    # MultiPlot(stats.avg_avg_ready, title="Average ready", xvalues=label, labels=label).single_plot()
     MultiPlot(stats.avg_cost, title="Costs", xvalues=label, xlabel=params,
               ylabel="Euro per day", labels=label).single_plot()
+
+    y = np.array((stats.avg_cost.tolist(), stats.avg_saving.tolist(),
+                  stats.avg_net_cost.tolist()))
+    MultiPlot(y, title="Costs", xlabel=params,
+              ylabel="Euro per day", xvalues=label).plot(["Grid", "Sold", "Net"])
 
     y = np.array((stats.avg_tot_consumption.tolist(), stats.avg_consumption.tolist(),
                   stats.avg_spv_consumption.tolist()))
@@ -47,14 +52,14 @@ if __name__ == "__main__":
     reset_parameters()
 
     # SPV / NBSS
-    spv_list = list(range(10, 110, 10))
-    nbss_list = list(range(10, 16, 1))
+    spv_list = list(range(500, 1600, 100))
+    nbss_list = list(range(10, 21, 1))
     stats_by_nbss = AvgStatistics(len(nbss_list), len(spv_list))
     stats_by_spv = AvgStatistics(r=len(spv_list))
 
     # F / TMAX
-    f_list = list(range(1, conf.NBSS + 1))
-    tmax_list = list(range(10, 60, 10)) + list(range(60, 360, 60))
+    f_list = list(range(10, conf.NBSS + 1))
+    tmax_list = list(range(60, 660, 60))
     stats_by_tmaxf = AvgStatistics(len(tmax_list), len(f_list))
     stats_by_f = AvgStatistics(r=len(f_list))
     stats_by_Tmax = AvgStatistics(r=len(tmax_list))
@@ -100,10 +105,11 @@ if __name__ == "__main__":
         for f in f_list:
             conf.TMAX = tmax
             conf.F = f
+            print(tmax, f)
             stats = simulate()
             print("-")
 
-            stats_by_tmaxf.compute_avg(stats, tmax_list.index(conf.TMAX), f_list.index(conf.F))
+            stats_by_tmaxf.compute_avg(stats, tmax_list.index(tmax), f_list.index(f))
 
     multi_plot(stats_by_tmaxf, f_list, tmax_list, "F", "TMAX")
 

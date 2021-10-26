@@ -30,6 +30,8 @@ class Plot:
         fig = plt.figure()
         plt.grid()
         plt.title(self.title)
+        if self.ylabel:
+            plt.ylabel(self.ylabel)
 
         # plt.axvline(80, linestyle='--', c='r')
         # plt.axvline(172, linestyle='--', c='r')
@@ -61,6 +63,8 @@ class Plot:
     def plot_by_hour(self):
         fig = plt.figure()
         plt.grid()
+        if self.ylabel:
+            plt.ylabel(self.ylabel)
 
         plt.xlim((0, 23))
 
@@ -88,13 +92,19 @@ class MultiPlot(Plot):
 
     # override
     def plot(self, legend_labels):
-        plt.figure()
+        fig = plt.figure()
         plt.grid()
         plt.title(self.title)
         plt.xlabel(self.xlabel)
         plt.ylabel(self.ylabel)
 
         # plt.ylim((np.min(self.yvalues) - 1, np.max(self.yvalues) + 2))
+
+        ax = fig.add_subplot(1, 1, 1)
+        major_ticks = np.arange(500, 1600, 100)
+        minor_ticks = np.arange(500, 1600, 100)
+        ax.set_xticks(major_ticks)
+        ax.set_xticks(minor_ticks, minor=True)
 
         for i in range(self.yvalues.shape[0]):
             plt.plot(self.xvalues, self.yvalues[i, :], ".-", label=self.labels + " " + str(legend_labels[i]))

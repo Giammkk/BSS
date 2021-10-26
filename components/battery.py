@@ -4,13 +4,13 @@ import config as conf
 
 class Battery:
 
-    def __init__(self, charge=random.gauss(conf.C * 0.2, 1000), last_update=0):
+    def __init__(self, charge=random.uniform(conf.C * 0.2, conf.C * 0.4), last_update=0):
         self.charge = 0 if charge < 0 else charge
         self.charge = conf.C * 0.4 if charge > conf.C * 0.4 else charge
         self.last_update = last_update
         self.booked = False
 
-    def update_charge(self, time, PVpower, price):
+    def update_charge_2(self, time, PVpower, price):
         C = conf.C
         CR = conf.CR
         PV_SET = conf.PV_SET
@@ -53,6 +53,34 @@ class Battery:
         self.last_update = time
         return price_power_update, power_from_grid, power_from_pv, self.charge - charge_0
 
+    def update_charge(self, time, PVpower, price, pv_surplus):
+        CR = conf.CR
+        # PV_SET = conf.PV_SET    # no need because PVpower is 0 when PV_SET is 0
+
+        charge_0 = self.charge
+        power_from_grid = 0
+        power_from_pv = 0
+        power_from_surplus = 0
+
+        power_update = CR * (time - self.last_update) / 60  # power to give to the battery
+        self.charge += power_update
+
+        if power_update < 0:
+            raise Exception('Negative power update')
+
+        if PVpower >= CR:
+            power_from_pv = power_update
+        else:
+            power_from_pv = PVpower * (time - self.last_update) / 60
+            power_from_surplus = pv_surplus.drain_energy((CR - PVpower) * (time - self.last_update) / 60)
+            power_from_grid = (CR - PVpower - power_from_surplus) * (time - self.last_update) / 60
+
+        price_power_update = price * power_from_grid * 1e-6
+        self.last_update = time
+        # if power_from_grid > conf.CR or power_from_pv > conf.CR or power_from_surplus > conf.CR:
+        #     print(power_from_grid, power_from_pv, power_from_surplus)
+        return price_power_update, power_from_grid, power_from_pv, power_from_surplus, self.charge - charge_0
+
     def time_to_ready(self, time):
         C = conf.C
         BTH = conf.BTH
@@ -63,7 +91,7 @@ class Battery:
         delta_t = 0
 
         while True:
-            FC = C if conf.check_high_demand(hour) else BTH  # Full charge
+            FC = C if not conf.check_high_demand(hour) else BTH  # Full charge
             time_to_ch = 60 * (hour + 1) + ((day - 1) * 24 * 60) - time  # Time to change hour
 
             t = (FC - self.charge) * 60 / CR
